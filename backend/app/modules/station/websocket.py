@@ -66,7 +66,7 @@ class ConnectionManager:
         logger.debug("Received station event: %s", event_type_raw)
 
         match event_type_raw:
-            case "heartbeat":
+            case "ping" | "heartbeat":
                 self.status.last_heartbeat = datetime.now(timezone.utc)
                 self.status.battery = data.get("battery")
                 self.status.firmware_version = data.get("firmware_version")
