@@ -11,6 +11,7 @@ const SchedulerPage = lazy(() => import('@/app/scheduler/page'))
 const ResponsesPage = lazy(() => import('@/app/responses/page'))
 const AiPage = lazy(() => import('@/app/ai/page'))
 const SettingsPage = lazy(() => import('@/app/settings/page'))
+const ApiKeysPage = lazy(() => import('@/app/admin/api-keys'))
 const StationPage = lazy(() => import('@/app/station/page'))
 const ParrotPage = lazy(() => import('@/app/parrot/page'))
 const FeedingPage = lazy(() => import('@/app/feeding/page'))
@@ -35,6 +36,7 @@ const AppRouter = () => (
         <Route path="responses" element={<ResponsesPage />} />
         <Route path="ai" element={<AiPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="admin/api-keys" element={<ApiKeysPage />} />
         <Route path="station" element={<StationPage />} />
         <Route path="parrot" element={<ParrotPage />} />
         <Route path="feeding" element={<FeedingPage />} />

@@ -104,6 +104,13 @@ const IconSettings = () => (
   </svg>
 )
 
+const IconKey = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+      d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+  </svg>
+)
+
 const IconMenu = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -208,6 +215,23 @@ const NAV_SECTIONS: NavSection[] = [
         label: 'Modo Estacion',
         tooltip: 'Activa el modo continuo: la app escucha y responde sola',
         icon: <IconStation />,
+      },
+    ],
+  },
+  {
+    heading: 'Admin',
+    items: [
+      {
+        to: '/admin/api-keys',
+        label: 'API Keys',
+        tooltip: 'Configura tus claves de OpenAI, ElevenLabs y Gemini',
+        icon: <IconKey />,
+      },
+      {
+        to: '/settings',
+        label: 'Configuracion',
+        tooltip: 'Preferencias generales y ajustes de la estacion',
+        icon: <IconSettings />,
       },
     ],
   },
@@ -319,26 +343,8 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
           ))}
         </nav>
 
-        {/* Bottom: settings */}
-        <div className="px-3 py-4 border-t border-slate-800 shrink-0">
-          <Tooltip text="Configura tus API keys y preferencias de la app" position="right">
-            <NavLink
-              to="/settings"
-              onClick={onClose}
-              title="Configuracion de la app"
-              className={({ isActive }) =>
-                `w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
-                  isActive
-                    ? 'bg-brand-600 text-white'
-                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
-                }`
-              }
-            >
-              <IconSettings />
-              <span>Configuracion</span>
-            </NavLink>
-          </Tooltip>
-        </div>
+        {/* Bottom spacer */}
+        <div className="px-3 py-3 shrink-0" />
       </aside>
     </>
   )

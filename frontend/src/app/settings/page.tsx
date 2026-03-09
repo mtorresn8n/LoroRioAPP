@@ -1,104 +1,73 @@
-import { useCallback, useEffect, useState } from 'react';
-import { api } from '@/core/api-client';
-import { Tooltip } from '@/components/tooltip';
-import { useToast } from '@/components/toast';
+import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { api } from '@/core/api-client'
+import { Tooltip } from '@/components/tooltip'
+import { useToast } from '@/components/toast'
 
 interface Setting {
-  key: string;
-  value: string;
-  label: string;
-  category: string;
-  is_secret: boolean;
-  is_configured: boolean;
-  updated_at: string;
+  key: string
+  value: string
+  label: string
+  category: string
+  is_secret: boolean
+  is_configured: boolean
+  updated_at: string
 }
 
-interface TestResult {
-  valid: boolean;
-  message: string;
-}
+const API_KEY_SETTINGS = ['openai_api_key', 'elevenlabs_api_key', 'elevenlabs_voice_id', 'gemini_api_key']
 
 const CATEGORY_LABELS: Record<string, string> = {
-  ai: 'Inteligencia Artificial',
   general: 'General',
   station: 'Estacion',
-};
+}
 
-const CATEGORY_ORDER = ['ai', 'general', 'station'];
+const CATEGORY_ORDER = ['general', 'station']
 
 const SettingsPage = () => {
-  const { showToast } = useToast();
-  const [settings, setSettings] = useState<Setting[]>([]);
-  const [editingKey, setEditingKey] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState<string | null>(null);
-  const [testResults, setTestResults] = useState<Record<string, TestResult>>({});
+  const { showToast } = useToast()
+  const [settings, setSettings] = useState<Setting[]>([])
+  const [editingKey, setEditingKey] = useState<string | null>(null)
+  const [editValue, setEditValue] = useState('')
+  const [saving, setSaving] = useState(false)
 
   const fetchSettings = useCallback(async () => {
     try {
-      const data = await api.get<Setting[]>('/api/v1/settings/');
-      setSettings(data);
+      const data = await api.get<Setting[]>('/api/v1/settings/')
+      // Filter out API key settings - those are managed in /admin/api-keys
+      setSettings(data.filter((s) => !API_KEY_SETTINGS.includes(s.key)))
     } catch {
-      showToast('Error al cargar la configuracion', 'error');
+      showToast('Error al cargar la configuracion', 'error')
     }
-  }, [showToast]);
+  }, [showToast])
 
   useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
+    void fetchSettings()
+  }, [fetchSettings])
 
   const handleEdit = (setting: Setting) => {
-    setEditingKey(setting.key);
-    setEditValue(setting.is_secret ? '' : setting.value);
-  };
+    setEditingKey(setting.key)
+    setEditValue(setting.value)
+  }
 
   const handleSave = async (key: string) => {
-    if (!editValue && settings.find((s) => s.key === key)?.is_secret) {
-      setEditingKey(null);
-      return;
-    }
-
-    setSaving(true);
+    setSaving(true)
     try {
-      await api.put(`/api/v1/settings/${key}`, { value: editValue });
-      setEditingKey(null);
-      setEditValue('');
-      await fetchSettings();
-      showToast('Configuracion guardada', 'success');
-      setTestResults((prev) => {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
+      await api.put(`/api/v1/settings/${key}`, { value: editValue })
+      setEditingKey(null)
+      setEditValue('')
+      await fetchSettings()
+      showToast('Configuracion guardada', 'success')
     } catch {
-      showToast('Error al guardar', 'error');
+      showToast('Error al guardar', 'error')
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
-
-  const handleTest = async (key: string) => {
-    setTesting(key);
-    try {
-      const result = await api.post<TestResult>(`/api/v1/settings/test/${key}`, {});
-      setTestResults((prev) => ({ ...prev, [key]: result }));
-      showToast(result.valid ? 'API Key valida' : 'API Key invalida', result.valid ? 'success' : 'error');
-    } catch {
-      setTestResults((prev) => ({
-        ...prev,
-        [key]: { valid: false, message: 'Error al verificar' },
-      }));
-      showToast('Error al verificar la API key', 'error');
-    } finally {
-      setTesting(null);
-    }
-  };
+  }
 
   const handleCancel = () => {
-    setEditingKey(null);
-    setEditValue('');
-  };
+    setEditingKey(null)
+    setEditValue('')
+  }
 
   const groupedSettings = CATEGORY_ORDER
     .map((cat) => ({
@@ -106,131 +75,99 @@ const SettingsPage = () => {
       label: CATEGORY_LABELS[cat] ?? cat,
       items: settings.filter((s) => s.category === cat),
     }))
-    .filter((g) => g.items.length > 0);
-
-  const isTestableKey = (key: string) =>
-    ['openai_api_key', 'elevenlabs_api_key', 'gemini_api_key'].includes(key);
+    .filter((g) => g.items.length > 0)
 
   return (
-    <div className="p-4 space-y-6 pb-10 max-w-lg mx-auto">
+    <div className="p-4 space-y-5 pb-10 max-w-lg mx-auto">
       <div className="pt-2">
         <h1 className="text-xl font-bold text-slate-100">Configuracion</h1>
         <p className="text-slate-400 text-sm mt-1">
-          API keys y preferencias de la aplicacion
+          Preferencias generales y ajustes de la estacion
         </p>
       </div>
 
+      {/* Link to API Keys */}
+      <Link
+        to="/admin/api-keys"
+        className="bg-slate-800 rounded-xl p-4 flex items-center gap-3 hover:bg-slate-700 transition-colors group"
+      >
+        <div className="w-10 h-10 rounded-lg bg-emerald-900/40 flex items-center justify-center shrink-0">
+          <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+              d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+          </svg>
+        </div>
+        <div className="flex-1">
+          <p className="text-slate-100 text-sm font-medium group-hover:text-white">API Keys & Integraciones</p>
+          <p className="text-slate-500 text-xs">OpenAI, ElevenLabs, Gemini</p>
+        </div>
+        <svg className="w-5 h-5 text-slate-500 group-hover:text-slate-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </Link>
+
+      {/* General settings */}
       {groupedSettings.map((group) => (
         <div key={group.category} className="space-y-3">
-          <h2 className="text-base font-semibold text-slate-300">{group.label}</h2>
+          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wide">
+            {group.label}
+          </h2>
 
           {group.items.map((setting) => (
             <div
               key={setting.key}
-              className="bg-slate-800 rounded-lg p-4 space-y-2"
+              className="bg-slate-800 rounded-xl p-4 space-y-2"
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-slate-200 font-medium text-sm">
-                    {setting.label}
-                  </span>
-                  <span className="text-slate-500 text-xs ml-2">{setting.key}</span>
+                  <p className="text-slate-200 font-medium text-sm">{setting.label}</p>
+                  <p className="text-slate-500 text-xs mt-0.5">{setting.key}</p>
                 </div>
-                <Tooltip
-                  text={setting.is_configured ? 'Esta clave ya esta configurada' : 'Esta clave no esta configurada todavia'}
-                  position="left"
-                >
-                  <span
-                    className={`w-2.5 h-2.5 rounded-full ${setting.is_configured ? 'bg-emerald-500' : 'bg-red-500'}`}
-                  />
-                </Tooltip>
               </div>
 
               {editingKey === setting.key ? (
                 <div className="space-y-2">
                   <input
-                    type={setting.is_secret ? 'password' : 'text'}
+                    type="text"
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
-                    placeholder={
-                      setting.is_secret
-                        ? 'Ingresa el nuevo valor...'
-                        : setting.value || 'Ingresa el valor...'
-                    }
-                    className="w-full bg-slate-700 text-slate-200 rounded-lg p-3 border border-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    placeholder={setting.value || 'Ingresa el valor...'}
+                    className="w-full bg-slate-700 text-slate-200 rounded-xl p-3 border border-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     autoFocus
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') void handleSave(setting.key);
-                      if (e.key === 'Escape') handleCancel();
+                      if (e.key === 'Enter') void handleSave(setting.key)
+                      if (e.key === 'Escape') handleCancel()
                     }}
                   />
                   <div className="flex gap-2">
-                    <Tooltip text="Guardar este valor en la configuracion" position="top">
-                      <button
-                        onClick={() => void handleSave(setting.key)}
-                        disabled={saving}
-                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-600 text-white text-sm font-medium py-2 rounded-lg transition-colors"
-                      >
-                        {saving ? 'Guardando...' : 'Guardar'}
-                      </button>
-                    </Tooltip>
-                    <Tooltip text="Cancelar la edicion sin guardar cambios" position="top">
-                      <button
-                        onClick={handleCancel}
-                        className="px-4 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm font-medium py-2 rounded-lg transition-colors"
-                      >
-                        Cancelar
-                      </button>
-                    </Tooltip>
+                    <button
+                      onClick={() => void handleSave(setting.key)}
+                      disabled={saving}
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-600 text-white text-sm font-medium py-2.5 rounded-xl transition-colors min-h-[40px]"
+                    >
+                      {saving ? 'Guardando...' : 'Guardar'}
+                    </button>
+                    <button
+                      onClick={handleCancel}
+                      className="px-4 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm font-medium py-2.5 rounded-xl transition-colors min-h-[40px]"
+                    >
+                      Cancelar
+                    </button>
                   </div>
                 </div>
               ) : (
                 <div className="flex items-center justify-between">
                   <span className="text-slate-400 text-sm font-mono">
-                    {setting.is_configured
-                      ? setting.is_secret
-                        ? setting.value
-                        : setting.value || '(vacio)'
-                      : 'No configurado'}
+                    {setting.value || '(por defecto)'}
                   </span>
-                  <div className="flex gap-2">
-                    {isTestableKey(setting.key) && setting.is_configured && (
-                      <Tooltip text="Verifica que tu clave funcione correctamente" position="left">
-                        <button
-                          onClick={() => void handleTest(setting.key)}
-                          disabled={testing === setting.key}
-                          className="px-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 text-white text-xs font-medium py-1.5 rounded-lg transition-colors min-h-[36px]"
-                        >
-                          {testing === setting.key ? 'Verificando...' : 'Verificar'}
-                        </button>
-                      </Tooltip>
-                    )}
-                    <Tooltip
-                      text={setting.is_configured ? 'Editar el valor de esta configuracion' : 'Configurar esta clave para habilitar la funcionalidad'}
-                      position="left"
+                  <Tooltip text="Editar este valor" position="left">
+                    <button
+                      onClick={() => handleEdit(setting)}
+                      className="px-3 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium py-2 rounded-lg transition-colors min-h-[36px]"
                     >
-                      <button
-                        onClick={() => handleEdit(setting)}
-                        className="px-3 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium py-1.5 rounded-lg transition-colors min-h-[36px]"
-                      >
-                        {setting.is_configured ? 'Editar' : 'Configurar'}
-                      </button>
-                    </Tooltip>
-                  </div>
-                </div>
-              )}
-
-              {testResults[setting.key] && (
-                <div
-                  className={`text-xs p-2 rounded ${
-                    testResults[setting.key].valid
-                      ? 'bg-emerald-900/50 text-emerald-300'
-                      : 'bg-red-900/50 text-red-300'
-                  }`}
-                >
-                  {testResults[setting.key].valid ? 'API Key valida' : 'API Key invalida'}
-                  {' - '}
-                  {testResults[setting.key].message}
+                      Editar
+                    </button>
+                  </Tooltip>
                 </div>
               )}
             </div>
@@ -238,26 +175,13 @@ const SettingsPage = () => {
         </div>
       ))}
 
-      {/* Info box */}
-      <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 space-y-2">
-        <h3 className="text-sm font-semibold text-slate-300">Donde obtener las API Keys</h3>
-        <ul className="text-xs text-slate-400 space-y-2">
-          <li>
-            <strong className="text-slate-300">OpenAI (Whisper):</strong>{' '}
-            <span className="font-mono">platform.openai.com/api-keys</span>
-          </li>
-          <li>
-            <strong className="text-slate-300">ElevenLabs:</strong>{' '}
-            <span className="font-mono">elevenlabs.io/app/settings/api-keys</span>
-          </li>
-          <li>
-            <strong className="text-slate-300">Gemini:</strong>{' '}
-            <span className="font-mono">aistudio.google.com/apikey</span>
-          </li>
-        </ul>
-      </div>
+      {settings.length === 0 && (
+        <div className="text-center py-12 text-slate-500">
+          <p className="text-sm">Cargando configuracion...</p>
+        </div>
+      )}
     </div>
-  );
-};
+  )
+}
 
-export default SettingsPage;
+export default SettingsPage
