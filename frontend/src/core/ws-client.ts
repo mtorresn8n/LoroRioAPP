@@ -2,16 +2,13 @@
 
 import type { WsCommand, WsEvent, WsEventType } from '@/types'
 
+import { getApiBaseUrl } from '@/core/api-client'
+
 const getWsUrl = (): string => {
-  const win = window as unknown as Record<string, Record<string, string>>;
-  const apiUrl = win['__LORO_CONFIG__']?.['API_URL'];
-  if (apiUrl) {
-    const wsProtocol = apiUrl.startsWith('https') ? 'wss' : 'ws';
-    return apiUrl.replace(/^https?/, wsProtocol) + '/ws/station';
-  }
-  return (import.meta.env['VITE_WS_URL'] as string | undefined) ?? 'ws://localhost:8000/ws/station';
+  const apiUrl = getApiBaseUrl();
+  const wsProtocol = apiUrl.startsWith('https') ? 'wss' : 'ws';
+  return apiUrl.replace(/^https?/, wsProtocol) + '/ws/station';
 };
-const WS_URL = getWsUrl();
 const HEARTBEAT_INTERVAL = 30_000
 const MAX_BACKOFF = 30_000
 
@@ -32,7 +29,7 @@ class WsClient {
   connect(): void {
     if (this.socket?.readyState === WebSocket.OPEN) return
     this.setState('connecting')
-    this.socket = new WebSocket(WS_URL)
+    this.socket = new WebSocket(getWsUrl())
     this.socket.onopen = this.handleOpen
     this.socket.onmessage = this.handleMessage
     this.socket.onclose = this.handleClose

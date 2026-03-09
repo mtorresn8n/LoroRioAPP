@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { apiClient, BASE_URL } from '@/core/api-client'
+import { apiClient, getApiBaseUrl } from '@/core/api-client'
 import { Tooltip } from '@/components/tooltip'
 import { useToast } from '@/components/toast'
 import type { DailyStats, Recording, RecordingClassification, RecordingUpdate } from '@/types'
@@ -49,7 +49,7 @@ const RecordingsPage = () => {
       return
     }
     if (audioRef.current) audioRef.current.pause()
-    const audio = new Audio(`${BASE_URL}/api/v1/recordings/${rec.id}/file`)
+    const audio = new Audio(`${getApiBaseUrl()}/api/v1/recordings/${rec.id}/file`)
     audioRef.current = audio
     audio.play().catch(() => {})
     setPlayingId(rec.id)

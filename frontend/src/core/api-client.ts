@@ -1,13 +1,20 @@
 // Typed API client using fetch with error handling
 
-// Runtime config from /config.js (injected by nginx) or build-time env or default
-const getBaseUrl = (): string => {
+// Read runtime config lazily on every call to avoid race conditions
+// with inline script execution order
+function getBaseUrl(): string {
   const win = window as unknown as Record<string, Record<string, string>>;
   if (win['__LORO_CONFIG__']?.['API_URL']) return win['__LORO_CONFIG__']['API_URL'];
   return (import.meta.env['VITE_API_URL'] as string | undefined) ?? 'http://localhost:8000';
-};
-const BASE_URL = getBaseUrl();
-export { BASE_URL };
+}
+
+// Exported for components that need direct URL access (e.g. audio src)
+export const BASE_URL = new Proxy({} as { value: string }, {
+  get: () => getBaseUrl(),
+}) as unknown as string;
+
+// Use Object.prototype.toString override so template literals work
+export const getApiBaseUrl = getBaseUrl;
 
 export class ApiError extends Error {
   constructor(
@@ -44,7 +51,8 @@ async function parseResponse<T>(res: Response): Promise<T> {
 }
 
 function buildUrl(path: string, params?: Record<string, string | number | boolean>): string {
-  const url = new URL(`${BASE_URL}${path}`)
+  const base = getBaseUrl()
+  const url = new URL(`${base}${path}`)
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       url.searchParams.set(key, String(value))

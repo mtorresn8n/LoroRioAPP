@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { apiClient, BASE_URL } from '@/core/api-client'
+import { apiClient, getApiBaseUrl } from '@/core/api-client'
 import { AudioEngine } from '@/core/audio-engine'
 import { SoundDetector } from '@/core/detector'
 import { AudioRecorder } from '@/core/recorder'
@@ -142,7 +142,7 @@ const StationPage = () => {
     try {
       setCurrentClipName(event.clip_name ?? null)
       setIsPlaying(true)
-      await engine.play(`${BASE_URL}/api/v1/clips/${event.clip_id}/file`)
+      await engine.play(`${getApiBaseUrl()}/api/v1/clips/${event.clip_id}/file`)
       engine.onFinished = () => {
         setIsPlaying(false)
         setCurrentClipName(null)

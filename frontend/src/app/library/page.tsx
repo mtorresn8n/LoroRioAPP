@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { apiClient, BASE_URL } from '@/core/api-client'
+import { apiClient, getApiBaseUrl } from '@/core/api-client'
 import { ClipCard } from '@/components/clip-card'
 import { Tooltip } from '@/components/tooltip'
 import { useToast } from '@/components/toast'
@@ -53,7 +53,7 @@ const LibraryPage = () => {
     if (audioRef.current) {
       audioRef.current.pause()
     }
-    const audio = new Audio(`${BASE_URL}/api/v1/clips/${clip.id}/file`)
+    const audio = new Audio(`${getApiBaseUrl()}/api/v1/clips/${clip.id}/file`)
     audioRef.current = audio
     audio.play().catch(() => {})
     setPlayingId(clip.id)
