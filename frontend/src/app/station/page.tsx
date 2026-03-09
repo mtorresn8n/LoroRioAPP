@@ -70,9 +70,9 @@ const StationPage = () => {
   useEffect(() => {
     const loadStatus = async () => {
       try {
-        const events = await apiClient.get<Array<{ name: string; next_run: string }>>('/api/v1/scheduler/upcoming')
+        const events = await apiClient.get<Array<{ name: string; next_run: string; action_type: string }>>('/api/v1/scheduler/upcoming')
         if (events.length > 0) {
-          setNextEvent({ name: events[0].name, time: events[0].next_run })
+          setNextEvent({ schedule_name: events[0].name, trigger_at: events[0].next_run, action_type: events[0].action_type })
         }
       } catch {
         // silent
