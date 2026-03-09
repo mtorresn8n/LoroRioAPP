@@ -20,6 +20,10 @@ RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
 # Add config.js to index.html
 RUN sed -i 's|</head>|<script src="/config.js"></script></head>|' /usr/share/nginx/html/index.html
 
+# Create a default config.js (overwritten at runtime by entrypoint)
+RUN echo 'window.__LORO_CONFIG__={API_URL:"__BACKEND_URL_PLACEHOLDER__"};' > /usr/share/nginx/html/config.js
+
 EXPOSE 80
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD []
