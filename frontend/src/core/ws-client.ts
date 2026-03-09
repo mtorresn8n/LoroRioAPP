@@ -7,9 +7,9 @@ const getWsUrl = (): string => {
   const apiUrl = win['__LORO_CONFIG__']?.['API_URL'];
   if (apiUrl) {
     const wsProtocol = apiUrl.startsWith('https') ? 'wss' : 'ws';
-    return apiUrl.replace(/^https?/, wsProtocol) + '/ws';
+    return apiUrl.replace(/^https?/, wsProtocol) + '/ws/station';
   }
-  return (import.meta.env['VITE_WS_URL'] as string | undefined) ?? 'ws://localhost:8000/ws';
+  return (import.meta.env['VITE_WS_URL'] as string | undefined) ?? 'ws://localhost:8000/ws/station';
 };
 const WS_URL = getWsUrl();
 const HEARTBEAT_INTERVAL = 30_000

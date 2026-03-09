@@ -37,7 +37,7 @@ const YoutubePage = () => {
     setError(null)
     setInfo(null)
     try {
-      const data = await apiClient.post<YoutubeInfo>('/api/youtube/info', { url })
+      const data = await apiClient.post<YoutubeInfo>('/api/v1/youtube/info', { url })
       setInfo(data)
       setName(data.title.slice(0, 60))
       setEndTime(formatTime(Math.min(data.duration, 60)))
@@ -64,7 +64,7 @@ const YoutubePage = () => {
         tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
         clip_type: clipType,
       }
-      await apiClient.post('/api/youtube/extract', payload)
+      await apiClient.post('/api/v1/youtube/extract', payload)
       showToast('Clip guardado en la biblioteca', 'success')
       setUrl('')
       setInfo(null)

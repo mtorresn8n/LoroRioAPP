@@ -32,7 +32,7 @@ const LibraryPage = () => {
       const params: Record<string, string> = {}
       if (search) params['q'] = search
       if (typeFilter !== 'all') params['type'] = typeFilter
-      const data = await apiClient.get<Clip[]>('/api/clips', params)
+      const data = await apiClient.get<Clip[]>('/api/v1/clips', params)
       setClips(Array.isArray(data) ? data : [])
     } catch {
       setClips([])
@@ -54,7 +54,7 @@ const LibraryPage = () => {
     if (audioRef.current) {
       audioRef.current.pause()
     }
-    const audio = new Audio(`${BASE_URL}/api/clips/${clip.id}/file`)
+    const audio = new Audio(`${BASE_URL}/api/v1/clips/${clip.id}/file`)
     audioRef.current = audio
     audio.play().catch(() => {})
     setPlayingId(clip.id)
@@ -66,7 +66,7 @@ const LibraryPage = () => {
     if (!file) return
     try {
       const name = file.name.replace(/\.[^.]+$/, '')
-      await apiClient.upload<Clip>('/api/clips/upload', file, {
+      await apiClient.upload<Clip>('/api/v1/clips/upload', file, {
         name,
         type: 'sound',
         category: 'general',

@@ -49,8 +49,8 @@ const ResponsesPage = () => {
   const loadData = useCallback(async () => {
     try {
       const [rulesData, clipData] = await Promise.all([
-        apiClient.get<ResponseRule[]>('/api/responses'),
-        apiClient.get<Clip[]>('/api/clips'),
+        apiClient.get<ResponseRule[]>('/api/v1/responses'),
+        apiClient.get<Clip[]>('/api/v1/clips'),
       ])
       setRules(Array.isArray(rulesData) ? rulesData : [])
       setClips(Array.isArray(clipData) ? clipData : [])
@@ -67,7 +67,7 @@ const ResponsesPage = () => {
 
   const handleToggle = useCallback(async (rule: ResponseRule) => {
     try {
-      await apiClient.put<ResponseRule>(`/api/responses/${rule.id}`, { enabled: !rule.enabled })
+      await apiClient.put<ResponseRule>(`/api/v1/responses/${rule.id}`, { enabled: !rule.enabled })
       setRules((prev) =>
         prev.map((r) => r.id === rule.id ? { ...r, enabled: !r.enabled } : r),
       )
@@ -103,7 +103,7 @@ const ResponsesPage = () => {
         action_config: actionConfig,
         cooldown_seconds: formCooldown,
       }
-      await apiClient.post('/api/responses', payload)
+      await apiClient.post('/api/v1/responses', payload)
       await loadData()
       setView('list')
       setFormName('')

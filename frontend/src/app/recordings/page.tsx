@@ -28,8 +28,8 @@ const RecordingsPage = () => {
       const params: Record<string, string> = {}
       if (filter !== 'all') params['classification'] = filter
       const [recs, statsData] = await Promise.all([
-        apiClient.get<Recording[]>('/api/recordings', params),
-        apiClient.get<DailyStats>('/api/stats/today'),
+        apiClient.get<Recording[]>('/api/v1/recordings', params),
+        apiClient.get<DailyStats>('/api/v1/recordings/stats'),
       ])
       setRecordings(Array.isArray(recs) ? recs : [])
       setStats(statsData)
@@ -51,7 +51,7 @@ const RecordingsPage = () => {
       return
     }
     if (audioRef.current) audioRef.current.pause()
-    const audio = new Audio(`${BASE_URL}/api/recordings/${rec.id}/file`)
+    const audio = new Audio(`${BASE_URL}/api/v1/recordings/${rec.id}/file`)
     audioRef.current = audio
     audio.play().catch(() => {})
     setPlayingId(rec.id)
@@ -60,7 +60,7 @@ const RecordingsPage = () => {
 
   const handleClassify = useCallback(async (rec: Recording, classification: RecordingClassification) => {
     try {
-      await apiClient.put<Recording>(`/api/recordings/${rec.id}`, {
+      await apiClient.put<Recording>(`/api/v1/recordings/${rec.id}`, {
         classification,
       } satisfies RecordingUpdate)
       setRecordings((prev) =>
@@ -74,7 +74,7 @@ const RecordingsPage = () => {
 
   const handleFavorite = useCallback(async (rec: Recording) => {
     try {
-      await apiClient.put<Recording>(`/api/recordings/${rec.id}`, {
+      await apiClient.put<Recording>(`/api/v1/recordings/${rec.id}`, {
         is_favorite: !rec.is_favorite,
       } satisfies RecordingUpdate)
       setRecordings((prev) =>

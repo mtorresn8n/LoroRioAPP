@@ -30,9 +30,9 @@ const SchedulerPage = () => {
   const loadData = useCallback(async () => {
     try {
       const [schedData, clipData, sessionData] = await Promise.all([
-        apiClient.get<Schedule[]>('/api/schedules'),
-        apiClient.get<Clip[]>('/api/clips'),
-        apiClient.get<Session[]>('/api/sessions'),
+        apiClient.get<Schedule[]>('/api/v1/scheduler'),
+        apiClient.get<Clip[]>('/api/v1/clips'),
+        apiClient.get<Session[]>('/api/v1/training/sessions'),
       ])
       setSchedules(Array.isArray(schedData) ? schedData : [])
       setClips(Array.isArray(clipData) ? clipData : [])
@@ -50,7 +50,7 @@ const SchedulerPage = () => {
 
   const handleToggle = useCallback(async (schedule: Schedule) => {
     try {
-      await apiClient.put<Schedule>(`/api/schedules/${schedule.id}`, {
+      await apiClient.put<Schedule>(`/api/v1/scheduler/${schedule.id}`, {
         enabled: !schedule.enabled,
       })
       setSchedules((prev) =>
@@ -110,7 +110,7 @@ const SchedulerPage = () => {
         }),
         ...(formType === 'interval' && { interval_minutes: formInterval }),
       }
-      await apiClient.post('/api/schedules', payload)
+      await apiClient.post('/api/v1/scheduler', payload)
       await loadData()
       setView('list')
       setFormName('')

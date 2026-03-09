@@ -14,9 +14,9 @@ const DashboardPage = () => {
     const load = async () => {
       try {
         const [statsData, recordings, schedules] = await Promise.all([
-          apiClient.get<DailyStats>('/api/stats/today'),
-          apiClient.get<Recording[]>('/api/recordings?limit=1&sort=created_at:desc'),
-          apiClient.get<Schedule[]>('/api/schedules?enabled=true&limit=5'),
+          apiClient.get<DailyStats>('/api/v1/recordings/stats'),
+          apiClient.get<Recording[]>('/api/v1/recordings?limit=1&sort=created_at:desc'),
+          apiClient.get<Schedule[]>('/api/v1/scheduler/?enabled=true&limit=5'),
         ])
         setStats(statsData)
         const recs = Array.isArray(recordings) ? recordings : []

@@ -24,8 +24,8 @@ const TrainingPage = () => {
   const loadData = useCallback(async () => {
     try {
       const [sessionData, clipData] = await Promise.all([
-        apiClient.get<Session[]>('/api/sessions'),
-        apiClient.get<Clip[]>('/api/clips'),
+        apiClient.get<Session[]>('/api/v1/training/sessions'),
+        apiClient.get<Clip[]>('/api/v1/clips'),
       ])
       setSessions(Array.isArray(sessionData) ? sessionData : [])
       setClips(Array.isArray(clipData) ? clipData : [])
@@ -43,7 +43,7 @@ const TrainingPage = () => {
   const handleSelectSession = useCallback(async (session: Session) => {
     setSelectedSession(session)
     try {
-      const logData = await apiClient.get<SessionLog[]>(`/api/sessions/${session.id}/logs`)
+      const logData = await apiClient.get<SessionLog[]>(`/api/v1/training/sessions/${session.id}/logs`)
       setLogs(Array.isArray(logData) ? logData : [])
     } catch {
       setLogs([])
@@ -104,7 +104,7 @@ const TrainingPage = () => {
         steps: formSteps,
         ...(formRewardId !== '' && { reward_clip_id: formRewardId }),
       }
-      await apiClient.post('/api/sessions', payload)
+      await apiClient.post('/api/v1/training/sessions', payload)
       await loadData()
       setView('list')
       setFormName('')

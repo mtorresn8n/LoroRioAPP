@@ -55,7 +55,7 @@ const StationPage = () => {
   useEffect(() => {
     const loadStats = async () => {
       try {
-        const data = await apiClient.get<DailyStats>('/api/stats/today')
+        const data = await apiClient.get<DailyStats>('/api/v1/recordings/stats')
         setStats(data)
       } catch {
         // silent
@@ -66,12 +66,14 @@ const StationPage = () => {
     return () => clearInterval(id)
   }, [])
 
-  // Load station status
+  // Load upcoming events from scheduler
   useEffect(() => {
     const loadStatus = async () => {
       try {
-        const status = await apiClient.get<StationStatus>('/api/station/status')
-        setNextEvent(status.next_event)
+        const events = await apiClient.get<Array<{ name: string; next_run: string }>>('/api/v1/scheduler/upcoming')
+        if (events.length > 0) {
+          setNextEvent({ name: events[0].name, time: events[0].next_run })
+        }
       } catch {
         // silent
       }
@@ -123,7 +125,7 @@ const StationPage = () => {
     try {
       setCurrentClipName(event.clip_name ?? null)
       setIsPlaying(true)
-      await engine.play(`${BASE_URL}/api/clips/${event.clip_id}/file`)
+      await engine.play(`${BASE_URL}/api/v1/clips/${event.clip_id}/file`)
       engine.onFinished = () => {
         setIsPlaying(false)
         setCurrentClipName(null)
@@ -156,7 +158,7 @@ const StationPage = () => {
       const blob = await recorderRef.current.stop()
       setIsRecording(false)
       const file = new File([blob], 'recording.webm', { type: blob.type })
-      await apiClient.upload('/api/recordings', file)
+      await apiClient.upload('/api/v1/recordings', file)
       setStats((prev) => prev ? { ...prev, recordings_made: prev.recordings_made + 1 } : prev)
     } catch {
       setIsRecording(false)
