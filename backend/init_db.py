@@ -18,7 +18,7 @@ from app.database import Base
 # Import all models so they register with Base.metadata
 from app.modules.clips.models import Clip  # noqa: F401
 from app.modules.recordings.models import Recording  # noqa: F401
-from app.modules.training.models import SessionLog, TrainingSession  # noqa: F401
+from app.modules.training.models import Session, SessionLog  # noqa: F401
 from app.modules.scheduler.models import Schedule, ScheduleAction  # noqa: F401
 from app.modules.responses.models import ResponseRule  # noqa: F401
 from app.modules.ai.models import AiAnalysis, AiTrainingPlan, ClonedVoice  # noqa: F401
