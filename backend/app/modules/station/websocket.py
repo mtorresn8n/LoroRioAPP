@@ -1,10 +1,14 @@
 import json
 import logging
+import random
 from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect
+from sqlalchemy import select
 
+from app.database import async_session_factory
+from app.modules.clips.models import Clip
 from app.modules.station.commands import BaseCommand
 from app.shared.events import EventType, event_bus
 
@@ -80,8 +84,32 @@ class ConnectionManager:
             case "playback_finished":
                 await event_bus.emit(EventType.CLIP_PLAYED, data)
 
+            case "play_random":
+                await self._handle_play_random()
+
+            case "pause" | "resume":
+                logger.info("Station %s", event_type_raw)
+
             case _:
                 logger.warning("Unknown event type from station: %s", event_type_raw)
+
+    async def _handle_play_random(self) -> None:
+        """Pick a random clip from the library and send play_clip command."""
+        try:
+            async with async_session_factory() as db:
+                result = await db.execute(select(Clip))
+                clips = result.scalars().all()
+            if not clips:
+                logger.warning("No clips available for play_random")
+                return
+            clip = random.choice(clips)
+            await self.broadcast({
+                "type": "play_clip",
+                "clip_id": clip.id,
+                "clip_name": clip.name,
+            })
+        except Exception as exc:
+            logger.error("Error handling play_random: %s", exc, exc_info=True)
 
 
 # Module-level singleton used by routes and scheduler

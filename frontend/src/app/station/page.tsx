@@ -174,7 +174,7 @@ const StationPage = () => {
       const blob = await recorderRef.current.stop()
       setIsRecording(false)
       const file = new File([blob], 'recording.webm', { type: blob.type })
-      await apiClient.upload('/api/v1/recordings', file)
+      await apiClient.upload('/api/v1/recordings/', file)
       setStats((prev) => prev ? { ...prev, recordings_made: prev.recordings_made + 1 } : prev)
     } catch {
       setIsRecording(false)
