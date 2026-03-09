@@ -25,15 +25,19 @@ class RecordingUpdate(BaseModel):
     trigger_clip_id: uuid.UUID | None = None
 
 
-class RecordingResponse(RecordingBase):
+class RecordingResponse(BaseModel):
+    """Response schema without restrictive pattern validators."""
     model_config = {"from_attributes": True}
 
     id: uuid.UUID
+    classification: str | None = None
+    notes: str | None = None
+    starred: bool = False
     file_path: str
     recorded_at: datetime
-    duration: float | None
-    peak_volume: float | None
-    trigger_clip_id: uuid.UUID | None
+    duration: float | None = None
+    peak_volume: float | None = None
+    trigger_clip_id: uuid.UUID | None = None
 
 
 class RecordingStats(BaseModel):

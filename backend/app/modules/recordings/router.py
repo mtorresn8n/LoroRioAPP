@@ -1,6 +1,8 @@
 import uuid
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, Form, Query, UploadFile, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
@@ -53,6 +55,26 @@ async def get_recording(
 ) -> RecordingResponse:
     recording = await service.get_recording(db, recording_id)
     return RecordingResponse.model_validate(recording)
+
+
+@router.get("/{recording_id}/file")
+async def get_recording_file(
+    recording_id: uuid.UUID,
+    db: AsyncSession = Depends(get_session),
+) -> FileResponse:
+    """Serve the audio file for a recording."""
+    recording = await service.get_recording(db, recording_id)
+    file_path = Path(recording.file_path)
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Recording file not found on disk")
+    media_type = {
+        ".mp3": "audio/mpeg",
+        ".wav": "audio/wav",
+        ".ogg": "audio/ogg",
+        ".webm": "audio/webm",
+        ".m4a": "audio/mp4",
+    }.get(file_path.suffix.lower(), "application/octet-stream")
+    return FileResponse(file_path, media_type=media_type)
 
 
 @router.post("/", response_model=RecordingResponse, status_code=status.HTTP_201_CREATED)
