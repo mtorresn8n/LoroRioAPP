@@ -9,7 +9,7 @@ const getWsUrl = (): string => {
   const wsProtocol = apiUrl.startsWith('https') ? 'wss' : 'ws';
   return apiUrl.replace(/^https?/, wsProtocol) + '/ws/station';
 };
-const HEARTBEAT_INTERVAL = 30_000
+const HEARTBEAT_INTERVAL = 15_000
 const MAX_BACKOFF = 30_000
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error'

@@ -65,7 +65,7 @@ const LibraryPage = () => {
     if (!file) return
     try {
       const name = file.name.replace(/\.[^.]+$/, '')
-      await apiClient.upload<Clip>('/api/v1/clips/upload', file, {
+      await apiClient.upload<Clip>('/api/v1/clips/', file, {
         name,
         type: 'sound',
         category: 'general',

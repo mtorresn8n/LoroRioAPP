@@ -74,6 +74,8 @@ class ConnectionManager:
                 self.status.last_heartbeat = datetime.now(timezone.utc)
                 self.status.battery = data.get("battery")
                 self.status.firmware_version = data.get("firmware_version")
+                # Reply so proxy knows connection is alive
+                await self.broadcast({"type": "pong"})
 
             case "sound_detected":
                 await event_bus.emit(EventType.SOUND_DETECTED, data)

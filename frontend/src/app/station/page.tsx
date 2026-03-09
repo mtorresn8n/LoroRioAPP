@@ -26,10 +26,42 @@ const StationPage = () => {
   const [startTime, setStartTime] = useState(0)
   const [detectionActive, setDetectionActive] = useState(false)
 
+  const AUTO_RECORD_DURATION_MS = 10_000 // Auto-stop after 10s
   const engineRef = useRef(new AudioEngine())
   const recorderRef = useRef(new AudioRecorder())
   const detectorRef = useRef(new SoundDetector())
   const rafRef = useRef<number | null>(null)
+  const autoRecordTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isRecordingRef = useRef(false) // Avoid stale closure
+
+  // Auto-record: start recording, auto-stop after duration, upload
+  const autoRecord = useCallback(async () => {
+    if (isRecordingRef.current || isPaused) return
+    const recorder = recorderRef.current
+    try {
+      await recorder.start()
+      isRecordingRef.current = true
+      setIsRecording(true)
+
+      autoRecordTimerRef.current = setTimeout(() => {
+        void (async () => {
+          try {
+            const blob = await recorder.stop()
+            isRecordingRef.current = false
+            setIsRecording(false)
+            const file = new File([blob], 'recording.webm', { type: blob.type })
+            await apiClient.upload('/api/v1/recordings/', file)
+            setStats((prev) => prev ? { ...prev, recordings_made: prev.recordings_made + 1 } : prev)
+          } catch {
+            isRecordingRef.current = false
+            setIsRecording(false)
+          }
+        })()
+      }, AUTO_RECORD_DURATION_MS)
+    } catch {
+      // Mic already in use or denied
+    }
+  }, [isPaused])
 
   // Start station
   const handleStartStation = useCallback(async () => {
@@ -48,6 +80,8 @@ const StationPage = () => {
       detector.onSoundDetected(() => {
         setLastSoundTime(new Date())
         send({ type: 'sound_detected' })
+        // Auto-record when sound is detected
+        void autoRecord()
       })
 
       const tick = () => {
@@ -58,7 +92,7 @@ const StationPage = () => {
     } catch {
       setDetectionActive(false)
     }
-  }, [acquireWakeLock, connect, send])
+  }, [acquireWakeLock, connect, send, autoRecord])
 
   // Stop station
   const handleStopStation = useCallback(() => {
@@ -67,9 +101,14 @@ const StationPage = () => {
     setVolumeLevel(0)
     setIsPlaying(false)
     setIsRecording(false)
+    isRecordingRef.current = false
     setIsPaused(false)
     setCurrentClipName(null)
 
+    if (autoRecordTimerRef.current !== null) {
+      clearTimeout(autoRecordTimerRef.current)
+      autoRecordTimerRef.current = null
+    }
     detectorRef.current.stop()
     engineRef.current.stop()
     if (rafRef.current !== null) {

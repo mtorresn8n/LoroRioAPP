@@ -1,6 +1,8 @@
 import uuid
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, Form, Query, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
@@ -32,6 +34,29 @@ async def get_clip(
 ) -> ClipResponse:
     clip = await service.get_clip(db, clip_id)
     return ClipResponse.model_validate(clip)
+
+
+@router.get("/{clip_id}/file")
+async def get_clip_file(
+    clip_id: uuid.UUID,
+    db: AsyncSession = Depends(get_session),
+) -> FileResponse:
+    """Serve the audio file for a clip."""
+    clip = await service.get_clip(db, clip_id)
+    file_path = Path(clip.file_path)
+    if not file_path.exists():
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Clip file not found on disk")
+    media_type = {
+        ".mp3": "audio/mpeg",
+        ".wav": "audio/wav",
+        ".ogg": "audio/ogg",
+        ".flac": "audio/flac",
+        ".aac": "audio/aac",
+        ".m4a": "audio/mp4",
+        ".webm": "audio/webm",
+    }.get(file_path.suffix.lower(), "application/octet-stream")
+    return FileResponse(file_path, media_type=media_type)
 
 
 @router.post("/", response_model=ClipResponse, status_code=status.HTTP_201_CREATED)
