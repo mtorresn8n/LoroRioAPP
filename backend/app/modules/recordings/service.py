@@ -156,10 +156,18 @@ async def get_recording_stats(db: AsyncSession) -> RecordingStats:
         for row in class_result.all()
     }
 
+    import math
+
+    def safe_float(val: float | None) -> float | None:
+        if val is None:
+            return None
+        f = float(val)
+        return f if math.isfinite(f) else None
+
     return RecordingStats(
         total=total,
         by_classification=by_classification,
         starred_count=starred_count,
-        avg_duration=float(avg_duration) if avg_duration is not None else None,
-        total_duration=float(total_duration) if total_duration is not None else None,
+        avg_duration=safe_float(avg_duration),
+        total_duration=safe_float(total_duration),
     )
