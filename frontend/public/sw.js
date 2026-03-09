@@ -1,7 +1,7 @@
 // LoroApp Service Worker - App Shell Caching
 
-const CACHE_NAME = 'loro-app-v1'
-const STATIC_CACHE = 'loro-static-v1'
+const CACHE_NAME = 'loro-app-v2'
+const STATIC_CACHE = 'loro-static-v2'
 
 // App shell assets to cache on install
 const APP_SHELL = [
@@ -45,8 +45,8 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (request.method !== 'GET') return
 
-  // Skip API requests and WebSocket
-  if (url.pathname.startsWith('/api/') || url.protocol === 'ws:' || url.protocol === 'wss:') {
+  // Skip API requests, WebSocket, and runtime config
+  if (url.pathname.startsWith('/api/') || url.pathname === '/config.js' || url.protocol === 'ws:' || url.protocol === 'wss:') {
     return
   }
 
