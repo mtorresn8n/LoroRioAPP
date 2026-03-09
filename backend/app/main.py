@@ -67,10 +67,12 @@ app = FastAPI(
 )
 
 # CORS middleware
+# When origins is ["*"], credentials must be False (Starlette requirement)
+_cors_credentials = settings.CORS_ORIGINS != ["*"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
+    allow_credentials=_cors_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )

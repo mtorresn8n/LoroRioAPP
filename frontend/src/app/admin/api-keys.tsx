@@ -126,7 +126,7 @@ const ApiKeysPage = () => {
   }
 
   const isTestableKey = (key: string) =>
-    ['openai_api_key', 'elevenlabs_api_key', 'gemini_api_key'].includes(key)
+    ['openai_api_key', 'elevenlabs_api_key', 'elevenlabs_voice_id', 'gemini_api_key'].includes(key)
 
   const configuredCount = settings.filter((s) => s.is_configured).length
 

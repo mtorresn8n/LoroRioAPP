@@ -74,6 +74,25 @@ async def test_api_key(
                 )
             return {"valid": resp.status_code == 200, "message": "OK" if resp.status_code == 200 else f"Error {resp.status_code}"}
 
+        elif key == "elevenlabs_voice_id":
+            # Test voice ID by generating a tiny speech sample
+            el_key = await service.get_setting_value(db, "elevenlabs_api_key")
+            if not el_key:
+                return {"valid": False, "message": "Configura primero la API key de ElevenLabs"}
+            import httpx
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.post(
+                    f"https://api.elevenlabs.io/v1/text-to-speech/{value}",
+                    headers={"xi-api-key": el_key, "Content-Type": "application/json"},
+                    json={"text": "Hola", "model_id": "eleven_multilingual_v2"},
+                )
+            if resp.status_code == 200:
+                return {"valid": True, "message": "Voice ID valido - audio generado correctamente"}
+            elif resp.status_code == 404:
+                return {"valid": False, "message": "Voice ID no encontrado"}
+            else:
+                return {"valid": False, "message": f"Error {resp.status_code}"}
+
         else:
             return {"valid": False, "message": "No test available for this key"}
 
