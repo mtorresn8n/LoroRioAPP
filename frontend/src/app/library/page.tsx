@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { apiClient } from '@/core/api-client'
+import { apiClient, BASE_URL } from '@/core/api-client'
 import { ClipCard } from '@/components/clip-card'
 import { Tooltip } from '@/components/tooltip'
 import { useToast } from '@/components/toast'
@@ -15,7 +15,6 @@ const CLIP_TYPES: { value: ClipType | 'all'; label: string }[] = [
   { value: 'reward', label: 'Recompensas' },
 ]
 
-const BASE_URL = (import.meta.env['VITE_API_URL'] as string | undefined) ?? 'http://localhost:8000'
 
 const LibraryPage = () => {
   const { showToast } = useToast()

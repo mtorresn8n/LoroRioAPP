@@ -7,6 +7,7 @@ const getBaseUrl = (): string => {
   return (import.meta.env['VITE_API_URL'] as string | undefined) ?? 'http://localhost:8000';
 };
 const BASE_URL = getBaseUrl();
+export { BASE_URL };
 
 export class ApiError extends Error {
   constructor(

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { apiClient } from '@/core/api-client'
+import { apiClient, BASE_URL } from '@/core/api-client'
 import { AudioEngine } from '@/core/audio-engine'
 import { SoundDetector } from '@/core/detector'
 import { AudioRecorder } from '@/core/recorder'
@@ -9,8 +9,6 @@ import { Tooltip } from '@/components/tooltip'
 import { useWakeLock } from '@/hooks/use-wakelock'
 import { useWebSocket, useWsCommand } from '@/hooks/use-websocket'
 import type { DailyStats, StationStatus, WsEvent } from '@/types'
-
-const BASE_URL = (import.meta.env['VITE_API_URL'] as string | undefined) ?? 'http://localhost:8000'
 
 const StationPage = () => {
   const { connectionState, connect, send } = useWebSocket(true)

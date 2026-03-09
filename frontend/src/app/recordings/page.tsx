@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { apiClient } from '@/core/api-client'
+import { apiClient, BASE_URL } from '@/core/api-client'
 import { Tooltip } from '@/components/tooltip'
 import { useToast } from '@/components/toast'
 import type { DailyStats, Recording, RecordingClassification, RecordingUpdate } from '@/types'
@@ -11,8 +11,6 @@ const CLASSIFICATIONS: { value: RecordingClassification | 'all'; label: string }
   { value: 'noise', label: 'Ruido' },
   { value: 'unclassified', label: 'Sin clasificar' },
 ]
-
-const BASE_URL = (import.meta.env['VITE_API_URL'] as string | undefined) ?? 'http://localhost:8000'
 
 const RecordingsPage = () => {
   const { showToast } = useToast()
