@@ -122,7 +122,7 @@ const TrainingPage = () => {
 
   if (view === 'running' && selectedSession) {
     return (
-      <div className="p-4 pb-6">
+      <div className="p-4 pb-6 max-w-lg mx-auto">
         <div className="flex items-center gap-3 mb-4 pt-2">
           <button
             onClick={() => setView('detail')}
@@ -147,7 +147,7 @@ const TrainingPage = () => {
 
   if (view === 'detail' && selectedSession) {
     return (
-      <div className="flex flex-col gap-4 p-4 pb-8">
+      <div className="flex flex-col gap-4 p-4 pb-8 max-w-lg mx-auto">
         <div className="flex items-center gap-3 pt-2">
           <button
             onClick={() => setView('list')}
@@ -168,7 +168,7 @@ const TrainingPage = () => {
 
         <button
           onClick={handleStartSession}
-          className="w-full py-4 bg-brand-500 rounded-xl text-white font-bold text-lg active:bg-brand-600"
+          className="w-full py-3 bg-brand-500 rounded-xl text-white font-semibold text-sm active:bg-brand-600 min-h-[48px]"
         >
           Iniciar sesion
         </button>
@@ -218,7 +218,7 @@ const TrainingPage = () => {
 
   if (view === 'create') {
     return (
-      <div className="flex flex-col gap-4 p-4 pb-8">
+      <div className="flex flex-col gap-4 p-4 pb-8 max-w-lg mx-auto">
         <div className="flex items-center gap-3 pt-2">
           <button
             onClick={() => setView('list')}
@@ -341,7 +341,7 @@ const TrainingPage = () => {
         <button
           onClick={handleSave}
           disabled={!formName.trim() || formSteps.length === 0 || saving}
-          className="w-full py-4 bg-brand-500 rounded-xl text-white font-bold text-lg disabled:opacity-50 active:bg-brand-600"
+          className="w-full py-3 bg-brand-500 rounded-xl text-white font-semibold text-sm disabled:opacity-50 active:bg-brand-600 min-h-[48px]"
         >
           {saving ? 'Guardando...' : 'Crear sesion'}
         </button>
@@ -350,7 +350,7 @@ const TrainingPage = () => {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4 pb-8">
+    <div className="flex flex-col gap-4 p-4 pb-8 max-w-lg mx-auto">
       <div className="flex items-center justify-between pt-2">
         <h1 className="text-xl font-bold text-slate-100">Entrenamiento</h1>
         <button

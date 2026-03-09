@@ -93,7 +93,7 @@ const RecordingsPage = () => {
     })
 
   return (
-    <div className="flex flex-col gap-4 p-4 pb-8">
+    <div className="flex flex-col gap-4 p-4 pb-8 max-w-lg mx-auto">
       <div className="pt-2">
         <h1 className="text-xl font-bold text-slate-100">Grabaciones</h1>
         <p className="text-slate-400 text-xs mt-0.5">Sonidos capturados por el modo estacion</p>

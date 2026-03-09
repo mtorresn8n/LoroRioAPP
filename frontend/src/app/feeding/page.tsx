@@ -648,7 +648,7 @@ const FeedingPage = () => {
     <div className="max-w-lg mx-auto p-4 pb-10 space-y-5">
       {/* Header */}
       <div className="pt-2">
-        <h1 className="text-2xl font-bold text-slate-100">Alimentacion</h1>
+        <h1 className="text-xl font-bold text-slate-100">Alimentacion</h1>
         <p className="text-slate-400 text-sm mt-1">
           Controla la dieta y nutricion de tu loro
         </p>

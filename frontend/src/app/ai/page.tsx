@@ -189,7 +189,7 @@ const AiPage = () => {
   );
 
   return (
-    <div className="p-4 space-y-4 pb-8">
+    <div className="p-4 space-y-4 pb-8 max-w-lg mx-auto">
       <div className="pt-2">
         <h1 className="text-xl font-bold text-slate-100">Inteligencia Artificial</h1>
         <p className="text-slate-400 text-xs mt-0.5">Analisis y herramientas con IA para el entrenamiento</p>

@@ -264,7 +264,7 @@ const YoutubePage = () => {
             <button
               onClick={() => void handleExtract()}
               disabled={!name.trim() || extracting}
-              className="w-full py-4 bg-red-600 rounded-xl text-white font-bold text-lg disabled:opacity-50 hover:bg-red-700 transition-colors"
+              className="w-full py-3 bg-red-600 rounded-xl text-white font-semibold text-sm disabled:opacity-50 hover:bg-red-700 transition-colors min-h-[48px]"
             >
               {extracting ? 'Extrayendo...' : 'Extraer y guardar'}
             </button>

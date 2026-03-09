@@ -123,7 +123,7 @@ const ParrotPage = () => {
     <div className="max-w-lg mx-auto p-4 pb-10 space-y-6">
       {/* Page header */}
       <div className="pt-2">
-        <h1 className="text-2xl font-bold text-slate-100">Perfil del Loro</h1>
+        <h1 className="text-xl font-bold text-slate-100">Perfil del Loro</h1>
         <p className="text-slate-400 text-sm mt-1">
           Configura la informacion personal de tu loro
         </p>
@@ -221,7 +221,7 @@ const ParrotPage = () => {
           <label className="block text-sm font-medium text-slate-300 mb-1.5">
             Sexo
           </label>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {([
               { value: 'male', label: 'Macho' },
               { value: 'female', label: 'Hembra' },
@@ -230,7 +230,7 @@ const ParrotPage = () => {
               <Tooltip key={opt.value} text={`Marcar como ${opt.label}`} position="top">
                 <button
                   onClick={() => update('sex', opt.value)}
-                  className={`flex-1 py-2.5 rounded-xl text-xs font-medium transition-colors border ${
+                  className={`w-full py-2.5 rounded-xl text-xs font-medium transition-colors border ${
                     profile.sex === opt.value
                       ? 'bg-emerald-600 text-white border-emerald-600'
                       : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-100'
@@ -317,7 +317,7 @@ const ParrotPage = () => {
         <button
           onClick={() => void handleSave()}
           disabled={saving}
-          className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white font-bold text-base rounded-xl transition-colors min-h-[56px]"
+          className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white font-semibold text-sm rounded-xl transition-colors min-h-[48px]"
         >
           {saving ? 'Guardando...' : 'Guardar perfil'}
         </button>

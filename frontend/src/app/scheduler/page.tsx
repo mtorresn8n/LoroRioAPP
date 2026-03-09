@@ -125,7 +125,7 @@ const SchedulerPage = () => {
 
   if (view === 'create') {
     return (
-      <div className="flex flex-col gap-4 p-4 pb-8">
+      <div className="flex flex-col gap-4 p-4 pb-8 max-w-lg mx-auto">
         <div className="flex items-center gap-3 pt-2">
           <Tooltip text="Volver a la lista de horarios" position="right">
             <button
@@ -299,7 +299,7 @@ const SchedulerPage = () => {
         <button
           onClick={() => void handleSave()}
           disabled={!formName.trim() || formActions.length === 0 || saving}
-          className="w-full py-4 bg-brand-500 rounded-xl text-white font-bold text-lg disabled:opacity-50 hover:bg-brand-600 transition-colors"
+          className="w-full py-3 bg-brand-500 rounded-xl text-white font-semibold text-sm disabled:opacity-50 hover:bg-brand-600 transition-colors min-h-[48px]"
         >
           {saving ? 'Guardando...' : 'Crear horario'}
         </button>
@@ -308,7 +308,7 @@ const SchedulerPage = () => {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4 pb-8">
+    <div className="flex flex-col gap-4 p-4 pb-8 max-w-lg mx-auto">
       <div className="flex items-center justify-between pt-2">
         <div>
           <h1 className="text-xl font-bold text-slate-100">Horarios</h1>

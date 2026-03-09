@@ -39,7 +39,7 @@ const DashboardPage = () => {
     <div className="flex flex-col gap-4 p-4 pb-6 max-w-lg mx-auto">
       {/* Header */}
       <div className="pt-2">
-        <h1 className="text-2xl font-bold text-slate-100">LoroApp</h1>
+        <h1 className="text-xl font-bold text-slate-100">LoroApp</h1>
         <p className="text-slate-400 text-sm">
           {new Date().toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })}
         </p>
@@ -188,7 +188,7 @@ const DashboardPage = () => {
           <Tooltip text="Ir a la biblioteca de clips de audio" position="top">
             <Link
               to="/library"
-              className="bg-slate-800 rounded-xl p-4 flex flex-col gap-2 hover:bg-slate-700 transition-colors"
+              className="bg-slate-800 rounded-xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-slate-700 transition-colors h-24"
             >
               <svg className="w-7 h-7 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
@@ -200,7 +200,7 @@ const DashboardPage = () => {
           <Tooltip text="Ver todas las grabaciones del loro" position="top">
             <Link
               to="/recordings"
-              className="bg-slate-800 rounded-xl p-4 flex flex-col gap-2 hover:bg-slate-700 transition-colors"
+              className="bg-slate-800 rounded-xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-slate-700 transition-colors h-24"
             >
               <svg className="w-7 h-7 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
@@ -212,7 +212,7 @@ const DashboardPage = () => {
           <Tooltip text="Ir a sesiones de entrenamiento" position="top">
             <Link
               to="/training"
-              className="bg-slate-800 rounded-xl p-4 flex flex-col gap-2 hover:bg-slate-700 transition-colors"
+              className="bg-slate-800 rounded-xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-slate-700 transition-colors h-24"
             >
               <svg className="w-7 h-7 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
@@ -224,7 +224,7 @@ const DashboardPage = () => {
           <Tooltip text="Activa el modo continuo: la app escucha y responde sola" position="top">
             <Link
               to="/station"
-              className="bg-brand-900/40 border border-brand-700/50 rounded-xl p-4 flex flex-col gap-2 hover:bg-brand-900/60 transition-colors"
+              className="bg-brand-900/40 border border-brand-700/50 rounded-xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-brand-900/60 transition-colors h-24"
             >
               <svg className="w-7 h-7 text-brand-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
@@ -246,12 +246,12 @@ interface StatCardProps {
 }
 
 const StatCard = ({ label, value, icon }: StatCardProps) => (
-  <div className="bg-slate-800 rounded-xl p-4 cursor-help">
+  <div className="bg-slate-800 rounded-xl p-4 cursor-help h-full flex flex-col justify-center">
     <div className="flex items-center gap-2 mb-1">
       {icon}
       <span className="text-2xl font-bold text-slate-100">{value}</span>
     </div>
-    <p className="text-xs text-slate-400">{label}</p>
+    <p className="text-xs text-slate-400 truncate">{label}</p>
   </div>
 )
 
