@@ -33,8 +33,9 @@ const SettingsPage = () => {
   const fetchSettings = useCallback(async () => {
     try {
       const data = await api.get<Setting[]>('/api/v1/settings/')
+      const items = Array.isArray(data) ? data : []
       // Filter out API key settings - those are managed in /admin/api-keys
-      setSettings(data.filter((s) => !API_KEY_SETTINGS.includes(s.key)))
+      setSettings(items.filter((s) => !API_KEY_SETTINGS.includes(s.key)))
     } catch {
       showToast('Error al cargar la configuracion', 'error')
     }

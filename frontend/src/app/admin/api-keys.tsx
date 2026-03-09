@@ -60,8 +60,10 @@ const ApiKeysPage = () => {
   const fetchSettings = useCallback(async () => {
     try {
       const data = await api.get<Setting[]>('/api/v1/settings/')
-      setSettings(data.filter((s) => API_KEY_SETTINGS.includes(s.key)))
-    } catch {
+      const items = Array.isArray(data) ? data : []
+      setSettings(items.filter((s) => API_KEY_SETTINGS.includes(s.key)))
+    } catch (err) {
+      console.error('Failed to load API keys:', err)
       showToast('Error al cargar las API keys', 'error')
     } finally {
       setLoading(false)
