@@ -42,3 +42,12 @@ class RecordingStats(BaseModel):
     starred_count: int
     avg_duration: float | None
     total_duration: float | None
+
+
+class DailyStats(BaseModel):
+    date: str
+    clips_played: int = 0
+    recordings_made: int = 0
+    sessions_completed: int = 0
+    sounds_detected: int = 0
+    uptime_minutes: int = 0

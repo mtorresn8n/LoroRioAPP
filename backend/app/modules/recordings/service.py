@@ -1,7 +1,7 @@
 import os
 import shutil
 import uuid
-from datetime import datetime
+from datetime import date, datetime, timezone
 
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import func, select
@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.recordings.models import Recording
 from app.modules.recordings.schemas import (
+    DailyStats,
     RecordingCreate,
     RecordingStats,
     RecordingUpdate,
@@ -170,4 +171,36 @@ async def get_recording_stats(db: AsyncSession) -> RecordingStats:
         starred_count=starred_count,
         avg_duration=safe_float(avg_duration),
         total_duration=safe_float(total_duration),
+    )
+
+
+async def get_daily_stats(db: AsyncSession) -> DailyStats:
+    """Get today's station activity stats."""
+    today = date.today()
+
+    # Recordings made today
+    rec_result = await db.execute(
+        select(func.count())
+        .select_from(Recording)
+        .where(func.date(Recording.recorded_at) == today)
+    )
+    recordings_made = rec_result.scalar_one()
+
+    # Clips played today (count from training session steps or clip_played events)
+    # For now we count based on recordings with a trigger_clip_id (means a clip triggered them)
+    clips_result = await db.execute(
+        select(func.count())
+        .select_from(Recording)
+        .where(func.date(Recording.recorded_at) == today)
+        .where(Recording.trigger_clip_id.is_not(None))
+    )
+    clips_played = clips_result.scalar_one()
+
+    return DailyStats(
+        date=today.isoformat(),
+        clips_played=clips_played,
+        recordings_made=recordings_made,
+        sessions_completed=0,
+        sounds_detected=recordings_made,  # Each recording = a detected sound
+        uptime_minutes=0,
     )

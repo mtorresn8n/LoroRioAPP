@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_session
 from app.modules.recordings import service
 from app.modules.recordings.schemas import (
+    DailyStats,
     RecordingCreate,
     RecordingResponse,
     RecordingStats,
@@ -15,8 +16,13 @@ from app.modules.recordings.schemas import (
 router = APIRouter(prefix="/recordings", tags=["recordings"])
 
 
-@router.get("/stats", response_model=RecordingStats)
-async def get_stats(db: AsyncSession = Depends(get_session)) -> RecordingStats:
+@router.get("/stats", response_model=DailyStats)
+async def get_stats(db: AsyncSession = Depends(get_session)) -> DailyStats:
+    return await service.get_daily_stats(db)
+
+
+@router.get("/stats/all", response_model=RecordingStats)
+async def get_all_stats(db: AsyncSession = Depends(get_session)) -> RecordingStats:
     return await service.get_recording_stats(db)
 
 
