@@ -105,7 +105,7 @@ class ConnectionManager:
             clip = random.choice(clips)
             await self.broadcast({
                 "type": "play_clip",
-                "clip_id": clip.id,
+                "clip_id": str(clip.id),
                 "clip_name": clip.name,
             })
         except Exception as exc:
