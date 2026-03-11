@@ -34,7 +34,7 @@ async def list_recordings(
     starred: bool | None = Query(default=None),
     trigger_clip_id: uuid.UUID | None = Query(default=None),
     skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=50, ge=1, le=200),
+    limit: int = Query(default=50, ge=1, le=1000),
     db: AsyncSession = Depends(get_session),
 ) -> list[RecordingResponse]:
     recordings = await service.list_recordings(

@@ -1,13 +1,11 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class RecordingBase(BaseModel):
-    classification: str | None = Field(
-        default=None, pattern="^(speech|noise|silence|parrot)$"
-    )
+    classification: str | None = None
     notes: str | None = None
     starred: bool = False
 
@@ -17,9 +15,7 @@ class RecordingCreate(RecordingBase):
 
 
 class RecordingUpdate(BaseModel):
-    classification: str | None = Field(
-        default=None, pattern="^(speech|noise|silence|parrot)$"
-    )
+    classification: str | None = None
     notes: str | None = None
     starred: bool | None = None
     trigger_clip_id: uuid.UUID | None = None

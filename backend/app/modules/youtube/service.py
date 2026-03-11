@@ -10,14 +10,56 @@ from app.modules.clips.models import Clip
 from app.modules.youtube.schemas import YouTubeExtractRequest, YouTubeInfoResponse
 from app.shared import audio_utils, storage
 
+# Browser to extract cookies from. Override with YOUTUBE_COOKIES_BROWSER env var.
+# Supported: chrome, edge, firefox, opera, brave, chromium, safari
+_COOKIES_BROWSER = os.environ.get("YOUTUBE_COOKIES_BROWSER", "firefox")
+
+# Optional Netscape-format cookies file (takes priority over browser cookies).
+_COOKIES_FILE = os.environ.get("YOUTUBE_COOKIES_FILE", "")
+
+# ffmpeg location – auto-detected from common install paths if not on PATH.
+_FFMPEG_DIR = os.environ.get("FFMPEG_LOCATION", "")
+if not _FFMPEG_DIR:
+    import shutil
+    if shutil.which("ffmpeg") is None:
+        # Check winget default install path
+        _winget_path = os.path.join(
+            os.environ.get("LOCALAPPDATA", ""),
+            "Microsoft", "WinGet", "Packages",
+        )
+        if os.path.isdir(_winget_path):
+            for entry in os.listdir(_winget_path):
+                if "FFmpeg" in entry:
+                    candidate = os.path.join(_winget_path, entry)
+                    for root, dirs, files in os.walk(candidate):
+                        if "ffmpeg.exe" in files:
+                            _FFMPEG_DIR = root
+                            break
+                    if _FFMPEG_DIR:
+                        break
+
+
+def _base_ydl_opts() -> dict:
+    """Return yt-dlp options shared by info and download calls."""
+    opts: dict = {
+        "quiet": True,
+        "no_warnings": True,
+    }
+    if _COOKIES_FILE and os.path.isfile(_COOKIES_FILE):
+        opts["cookiefile"] = _COOKIES_FILE
+    elif _COOKIES_BROWSER:
+        opts["cookiesfrombrowser"] = (_COOKIES_BROWSER,)
+    if _FFMPEG_DIR:
+        opts["ffmpeg_location"] = _FFMPEG_DIR
+    return opts
+
 
 async def get_video_info(url: str) -> YouTubeInfoResponse:
     """Fetch YouTube video metadata without downloading."""
     import yt_dlp  # type: ignore[import-untyped]
 
-    ydl_opts: dict = {
-        "quiet": True,
-        "no_warnings": True,
+    ydl_opts = {
+        **_base_ydl_opts(),
         "skip_download": True,
     }
 
@@ -59,8 +101,7 @@ async def extract_audio_clip(request: YouTubeExtractRequest) -> dict:
         raw_path = os.path.join(tmp_dir, f"raw_{clip_id}")
 
         ydl_opts: dict = {
-            "quiet": True,
-            "no_warnings": True,
+            **_base_ydl_opts(),
             "format": "bestaudio/best",
             "outtmpl": raw_path,
             "postprocessors": [

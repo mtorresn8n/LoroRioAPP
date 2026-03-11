@@ -58,6 +58,17 @@ async def update_session(
 
 async def delete_session(db: AsyncSession, session_id: uuid.UUID) -> None:
     session = await get_session(db, session_id)
+    # Nullify schedule_actions referencing this session before deleting
+    from app.modules.scheduler.models import ScheduleAction
+
+    stmt = (
+        select(ScheduleAction)
+        .where(ScheduleAction.session_id == session_id)
+    )
+    result = await db.execute(stmt)
+    for action in result.scalars().all():
+        action.session_id = None
+    await db.flush()
     await db.delete(session)
     await db.flush()
 

@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 class ClipBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
-    type: str = Field(default="sound", pattern="^(sound|word|phrase|music)$")
+    type: str = Field(default="sound", pattern="^(sound|word|phrase|music|whistle|reward)$")
     category: str | None = Field(default=None, max_length=100)
     tags: list[str] | None = None
     difficulty: int = Field(default=1, ge=1, le=10)
@@ -21,7 +21,7 @@ class ClipCreate(ClipBase):
 
 class ClipUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
-    type: str | None = Field(default=None, pattern="^(sound|word|phrase|music)$")
+    type: str | None = Field(default=None, pattern="^(sound|word|phrase|music|whistle|reward)$")
     category: str | None = None
     tags: list[str] | None = None
     difficulty: int | None = Field(default=None, ge=1, le=10)

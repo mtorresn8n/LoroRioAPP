@@ -16,13 +16,14 @@ router = APIRouter(prefix="/clips", tags=["clips"])
 async def list_clips(
     type: str | None = Query(default=None),
     category: str | None = Query(default=None),
+    source: str | None = Query(default=None),
     search: str | None = Query(default=None),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=200),
     db: AsyncSession = Depends(get_session),
 ) -> list[ClipResponse]:
     clips = await service.list_clips(
-        db, type_filter=type, category=category, search=search, skip=skip, limit=limit
+        db, type_filter=type, category=category, source=source, search=search, skip=skip, limit=limit
     )
     return [ClipResponse.model_validate(c) for c in clips]
 

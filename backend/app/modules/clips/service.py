@@ -11,7 +11,7 @@ from app.modules.clips.models import Clip
 from app.modules.clips.schemas import ClipCreate, ClipUpdate
 from app.shared import audio_utils, storage
 
-ALLOWED_AUDIO_EXTENSIONS = {".mp3", ".wav", ".ogg", ".flac", ".aac", ".m4a"}
+ALLOWED_AUDIO_EXTENSIONS = {".mp3", ".wav", ".ogg", ".flac", ".aac", ".m4a", ".webm"}
 
 
 def _validate_audio_extension(filename: str) -> str:
@@ -28,6 +28,7 @@ async def list_clips(
     db: AsyncSession,
     type_filter: str | None = None,
     category: str | None = None,
+    source: str | None = None,
     search: str | None = None,
     skip: int = 0,
     limit: int = 50,
@@ -37,6 +38,8 @@ async def list_clips(
         stmt = stmt.where(Clip.type == type_filter)
     if category:
         stmt = stmt.where(Clip.category == category)
+    if source:
+        stmt = stmt.where(Clip.source == source)
     if search:
         stmt = stmt.where(
             or_(

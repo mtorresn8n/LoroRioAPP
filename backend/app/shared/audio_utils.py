@@ -1,7 +1,23 @@
 import asyncio
 import os
+import shutil
 import subprocess
 from pathlib import Path
+
+# Ensure pydub can find ffmpeg/ffprobe even if not on PATH
+if shutil.which("ffmpeg") is None:
+    _winget_path = os.path.join(
+        os.environ.get("LOCALAPPDATA", ""),
+        "Microsoft", "WinGet", "Packages",
+    )
+    if os.path.isdir(_winget_path):
+        for _entry in os.listdir(_winget_path):
+            if "FFmpeg" in _entry:
+                for _root, _dirs, _files in os.walk(os.path.join(_winget_path, _entry)):
+                    if "ffmpeg.exe" in _files:
+                        os.environ["PATH"] = _root + os.pathsep + os.environ.get("PATH", "")
+                        break
+                break
 
 
 def get_audio_duration(file_path: str) -> float:
@@ -64,10 +80,13 @@ def get_peak_volume(file_path: str) -> float:
     return audio.max_dBFS
 
 
-async def get_audio_duration_async(file_path: str) -> float:
-    """Async wrapper around get_audio_duration."""
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, get_audio_duration, file_path)
+async def get_audio_duration_async(file_path: str) -> float | None:
+    """Async wrapper around get_audio_duration. Returns None if ffmpeg is missing."""
+    try:
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, get_audio_duration, file_path)
+    except (FileNotFoundError, Exception):
+        return None
 
 
 async def convert_to_mp3_async(input_path: str, output_path: str) -> None:
@@ -84,7 +103,10 @@ async def cut_audio_async(
     await loop.run_in_executor(None, cut_audio, input_path, output_path, start_ms, end_ms)
 
 
-async def get_peak_volume_async(file_path: str) -> float:
-    """Async wrapper around get_peak_volume."""
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, get_peak_volume, file_path)
+async def get_peak_volume_async(file_path: str) -> float | None:
+    """Async wrapper around get_peak_volume. Returns None if ffmpeg is missing."""
+    try:
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, get_peak_volume, file_path)
+    except (FileNotFoundError, Exception):
+        return None
