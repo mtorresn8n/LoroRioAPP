@@ -1,168 +1,241 @@
-// ── Clip types ──────────────────────────────────────────────────────────────
+// ── Parrot types ─────────────────────────────────────────────────────────────
 
-export type ClipType = 'word' | 'phrase' | 'sound' | 'music' | 'reward'
+export type ParrotSex = 'male' | 'female' | 'unknown'
 
-export interface Clip {
-  id: number
+export interface Parrot {
+  id: string
   name: string
-  type: ClipType
-  category: string
-  tags: string[]
-  file_path: string
-  duration: number | null
-  source_url: string | null
+  species: string | null
+  birth_date: string | null
+  adoption_date: string | null
+  weight_grams: number | null
+  sex: ParrotSex | null
+  notes: string | null
+  avatar_path: string | null
   created_at: string
   updated_at: string
 }
 
+export interface ParrotCreate {
+  name: string
+  species?: string | null
+  birth_date?: string | null
+  adoption_date?: string | null
+  weight_grams?: number | null
+  sex?: ParrotSex | null
+  notes?: string | null
+}
+
+export interface ParrotUpdate {
+  name?: string | null
+  species?: string | null
+  birth_date?: string | null
+  adoption_date?: string | null
+  weight_grams?: number | null
+  sex?: ParrotSex | null
+  notes?: string | null
+}
+
+export interface AvatarUploadResponse {
+  avatar_path: string
+  avatar_url: string
+}
+
+// ── Clip types ──────────────────────────────────────────────────────────────
+
+export type ClipType = 'word' | 'phrase' | 'sound' | 'music' | 'whistle' | 'reward'
+
+export interface Clip {
+  id: string
+  name: string
+  type: string
+  category: string | null
+  tags: string[] | null
+  file_path: string
+  duration: number | null
+  difficulty: number
+  default_volume: number
+  source: string
+  youtube_url: string | null
+  created_at: string
+}
+
 export interface ClipCreate {
   name: string
-  type: ClipType
-  category: string
-  tags: string[]
-  source_url?: string
+  type?: string
+  category?: string | null
+  tags?: string[] | null
+  difficulty?: number
+  default_volume?: number
+  source?: string
+  youtube_url?: string | null
 }
 
 export interface ClipUpdate {
   name?: string
-  type?: ClipType
-  category?: string
-  tags?: string[]
+  type?: string
+  category?: string | null
+  tags?: string[] | null
+  difficulty?: number
+  default_volume?: number
 }
 
 // ── Recording types ──────────────────────────────────────────────────────────
 
-export type RecordingClassification = 'imitation' | 'spontaneous' | 'noise' | 'unclassified'
+export type RecordingClassification = 'speech' | 'noise' | 'silence' | 'parrot' | null
 
 export interface Recording {
-  id: number
+  id: string
   file_path: string
   duration: number | null
   classification: RecordingClassification
-  is_favorite: boolean
-  trigger_type: string | null
-  session_id: number | null
-  volume_peak: number | null
-  created_at: string
+  notes: string | null
+  starred: boolean
+  peak_volume: number | null
+  trigger_clip_id: string | null
+  recorded_at: string
 }
 
 export interface RecordingCreate {
   classification?: RecordingClassification
-  trigger_type?: string
-  session_id?: number
+  trigger_clip_id?: string
+  notes?: string
+  starred?: boolean
 }
 
 export interface RecordingUpdate {
   classification?: RecordingClassification
-  is_favorite?: boolean
+  notes?: string
+  starred?: boolean
 }
 
 // ── Training session types ────────────────────────────────────────────────────
 
 export interface SessionStep {
-  clip_id: number
+  clip_id: string
   clip_name?: string
   repetitions: number
   wait_seconds: number
 }
 
-export interface Session {
-  id: number
-  name: string
-  objective: string
-  steps: SessionStep[]
-  reward_clip_id: number | null
-  reward_clip_name?: string
-  created_at: string
-  updated_at: string
+export interface SessionConfig {
+  steps?: SessionStep[]
+  reward_clip_id?: string
+  [key: string]: unknown
 }
+
+export interface Session {
+  id: string
+  name: string
+  objective: string | null
+  config: SessionConfig
+  is_active: boolean
+  created_at: string
+}
+
+/** Helper to extract steps from session config */
+export const getSessionSteps = (session: Session): SessionStep[] =>
+  Array.isArray(session.config?.steps) ? session.config.steps : []
 
 export interface SessionCreate {
   name: string
-  objective: string
-  steps: SessionStep[]
-  reward_clip_id?: number
+  objective?: string
+  config: SessionConfig
+  is_active?: boolean
 }
 
 export interface SessionLog {
-  id: number
-  session_id: number
-  started_at: string
-  ended_at: string | null
-  steps_completed: number
-  notes: string | null
+  id: string
+  session_id: string
+  step_number: number
+  clip_played_id: string | null
+  response_detected: boolean
+  recording_id: string | null
+  result: string | null
+  executed_at: string
 }
 
 // ── Schedule types ────────────────────────────────────────────────────────────
 
-export type ScheduleType = 'fixed' | 'random_window' | 'interval'
-export type ScheduleActionType = 'play_clip' | 'play_random' | 'start_session' | 'start_recording'
+export type ScheduleType = 'daily' | 'weekly' | 'interval' | 'once'
+export type ScheduleActionType = 'play_clip' | 'start_session' | 'record' | 'detect'
 
 export interface ScheduleAction {
-  type: ScheduleActionType
-  clip_id?: number
-  clip_name?: string
-  session_id?: number
-  session_name?: string
-  duration?: number
+  id?: string
+  schedule_id?: string
+  action_type: ScheduleActionType
+  clip_id?: string | null
+  session_id?: string | null
+  volume?: number
+  repetitions?: number
+  pause_between?: number
+  order_index?: number
 }
 
 export interface Schedule {
-  id: number
+  id: string
   name: string
   schedule_type: ScheduleType
-  enabled: boolean
-  time: string | null
-  days: number[]
-  window_start: string | null
-  window_end: string | null
-  interval_minutes: number | null
+  time_start: string | null
+  time_end: string | null
+  days_of_week: number[] | null
+  is_active: boolean
+  priority: number
   actions: ScheduleAction[]
-  created_at: string
 }
 
 export interface ScheduleCreate {
   name: string
   schedule_type: ScheduleType
-  enabled?: boolean
-  time?: string
-  days?: number[]
-  window_start?: string
-  window_end?: string
-  interval_minutes?: number
-  actions: ScheduleAction[]
+  time_start?: string
+  time_end?: string
+  days_of_week?: number[]
+  is_active?: boolean
+  priority?: number
+  actions: ScheduleActionCreate[]
+}
+
+export interface ScheduleActionCreate {
+  action_type: ScheduleActionType
+  clip_id?: string | null
+  session_id?: string | null
+  volume?: number
+  repetitions?: number
+  pause_between?: number
+  order_index?: number
 }
 
 // ── Response rule types ───────────────────────────────────────────────────────
 
-export type TriggerType = 'sound_detected' | 'keyword' | 'time_of_day' | 'manual'
-export type ActionType = 'play_clip' | 'play_random' | 'start_recording' | 'start_session'
+export type TriggerType = 'sound_detected' | 'keyword' | 'volume_threshold' | 'time_of_day'
+export type ActionType = 'play_clip' | 'start_session' | 'record' | 'log'
 
 export interface TriggerConfig {
   threshold?: number
   min_duration?: number
   keyword?: string
   time?: string
+  [key: string]: unknown
 }
 
 export interface ActionConfig {
-  clip_id?: number
-  session_id?: number
+  clip_id?: string
+  session_id?: string
   duration?: number
   category?: string
+  [key: string]: unknown
 }
 
 export interface ResponseRule {
-  id: number
+  id: string
   name: string
-  enabled: boolean
+  is_active: boolean
   trigger_type: TriggerType
   trigger_config: TriggerConfig
   action_type: ActionType
   action_config: ActionConfig
-  cooldown_seconds: number
+  cooldown_secs: number
   times_triggered: number
-  created_at: string
 }
 
 export interface ResponseRuleCreate {
@@ -171,7 +244,8 @@ export interface ResponseRuleCreate {
   trigger_config: TriggerConfig
   action_type: ActionType
   action_config: ActionConfig
-  cooldown_seconds?: number
+  cooldown_secs?: number
+  is_active?: boolean
 }
 
 // ── WebSocket types ───────────────────────────────────────────────────────────
@@ -212,8 +286,8 @@ export type WsEventType =
 
 export interface WsCommand {
   type: WsCommandType
-  clip_id?: number
-  session_id?: number
+  clip_id?: string
+  session_id?: string
   volume?: number
   duration?: number
   category?: string
@@ -221,10 +295,10 @@ export interface WsCommand {
 
 export interface WsEvent {
   type: WsEventType
-  clip_id?: number
+  clip_id?: string
   clip_name?: string
-  session_id?: number
-  recording_id?: number
+  session_id?: string
+  recording_id?: string
   volume?: number
   timestamp?: string
   message?: string
@@ -259,23 +333,109 @@ export interface NextEvent {
   action_type: string
 }
 
+export interface UpcomingEvent {
+  schedule_id: string
+  schedule_name: string
+  next_run: string
+  action_count: number
+}
+
 // ── YouTube import types ──────────────────────────────────────────────────────
 
 export interface YoutubeInfo {
   title: string
   duration: number
-  thumbnail: string
-  channel: string
+  thumbnail: string | null
+  uploader: string | null
 }
 
 export interface YoutubeExtractRequest {
   url: string
   start_time: number
-  end_time: number
+  end_time: number | null
   name: string
-  category: string
-  tags: string[]
-  clip_type: ClipType
+  category: string | null
+  tags: string[] | null
+  difficulty: number
+  default_volume: number
+}
+
+// ── Feeding types ────────────────────────────────────────────────────────────
+
+export type FoodCategory = 'fruit' | 'vegetable' | 'seed' | 'pellet' | 'nut' | 'protein' | 'grain' | 'treat' | 'toxic'
+export type FrequencyRecommendation = 'daily' | '3x_week' | 'occasional' | 'never'
+export type AgeRestriction = 'adult_only' | 'chick_friendly' | 'all_ages'
+
+export interface FoodItem {
+  id: string
+  name: string
+  category: FoodCategory
+  is_safe: boolean
+  is_toxic: boolean
+  nutritional_info: Record<string, unknown> | null
+  frequency_recommendation: FrequencyRecommendation | null
+  notes: string | null
+  age_restriction: AgeRestriction | null
+}
+
+export interface FoodItemCreate {
+  name: string
+  category: FoodCategory
+  is_safe?: boolean
+  is_toxic?: boolean
+  nutritional_info?: Record<string, unknown> | null
+  frequency_recommendation?: FrequencyRecommendation | null
+  notes?: string | null
+  age_restriction?: AgeRestriction | null
+}
+
+export interface FoodItemUpdate {
+  name?: string
+  category?: FoodCategory
+  is_safe?: boolean
+  is_toxic?: boolean
+  nutritional_info?: Record<string, unknown> | null
+  frequency_recommendation?: FrequencyRecommendation | null
+  notes?: string | null
+  age_restriction?: AgeRestriction | null
+}
+
+export interface FeedingLog {
+  id: string
+  parrot_id: string
+  food_item_id: string | null
+  food_name: string
+  quantity: string | null
+  fed_at: string
+  notes: string | null
+}
+
+export interface FeedingLogCreate {
+  parrot_id: string
+  food_item_id?: string | null
+  food_name: string
+  quantity?: string | null
+  fed_at?: string | null
+  notes?: string | null
+}
+
+export interface FeedingSummary {
+  parrot_id: string
+  days: number
+  total_feedings: number
+  unique_foods: number
+  most_fed_foods: Record<string, unknown>[]
+  toxic_foods_fed: string[]
+  category_breakdown: Record<string, number>
+}
+
+export interface FeedingPlan {
+  id: string
+  parrot_id: string
+  plan_data: Record<string, unknown>
+  generated_at: string
+  active: boolean
+  feedback: string | null
 }
 
 // ── API pagination ────────────────────────────────────────────────────────────

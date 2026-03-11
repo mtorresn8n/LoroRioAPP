@@ -52,7 +52,7 @@ export const Tooltip = ({ text, children, position = 'top' }: TooltipProps) => {
   return (
     <div
       ref={wrapperRef}
-      className="relative inline-flex"
+      className="relative inline-flex w-full"
       onMouseEnter={show}
       onMouseLeave={hide}
       onFocus={show}
@@ -66,7 +66,7 @@ export const Tooltip = ({ text, children, position = 'top' }: TooltipProps) => {
           role="tooltip"
           className={`absolute z-50 pointer-events-none ${positionClasses[position]}`}
         >
-          <div className="bg-slate-700 text-white text-xs rounded-lg px-3 py-2 max-w-[200px] text-center leading-snug shadow-xl border border-slate-600 animate-in fade-in duration-150">
+          <div className="bg-slate-700 text-white text-xs rounded-lg px-3 py-2 min-w-[200px] max-w-[300px] text-center leading-snug shadow-xl border border-slate-600 animate-in fade-in duration-150">
             {text}
           </div>
           <span

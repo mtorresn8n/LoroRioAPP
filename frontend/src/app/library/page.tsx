@@ -4,9 +4,9 @@ import { apiClient, getApiBaseUrl } from '@/core/api-client'
 import { ClipCard } from '@/components/clip-card'
 import { Tooltip } from '@/components/tooltip'
 import { useToast } from '@/components/toast'
-import type { Clip, ClipType } from '@/types'
+import type { Clip, ClipUpdate } from '@/types'
 
-const CLIP_TYPES: { value: ClipType | 'all'; label: string }[] = [
+const CLIP_TYPES: { value: string; label: string }[] = [
   { value: 'all', label: 'Todos' },
   { value: 'word', label: 'Palabras' },
   { value: 'phrase', label: 'Frases' },
@@ -21,8 +21,8 @@ const LibraryPage = () => {
   const [clips, setClips] = useState<Clip[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [typeFilter, setTypeFilter] = useState<ClipType | 'all'>('all')
-  const [playingId, setPlayingId] = useState<number | null>(null)
+  const [typeFilter, setTypeFilter] = useState<string>('all')
+  const [playingId, setPlayingId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
@@ -31,7 +31,7 @@ const LibraryPage = () => {
       const params: Record<string, string> = {}
       if (search) params['q'] = search
       if (typeFilter !== 'all') params['type'] = typeFilter
-      const data = await apiClient.get<Clip[]>('/api/v1/clips', params)
+      const data = await apiClient.get<Clip[]>('/api/v1/clips/', params)
       setClips(Array.isArray(data) ? data : [])
     } catch {
       setClips([])
@@ -59,6 +59,23 @@ const LibraryPage = () => {
     setPlayingId(clip.id)
     audio.onended = () => setPlayingId(null)
   }, [playingId])
+
+  const handleEdit = useCallback(async (clip: Clip, data: ClipUpdate): Promise<void> => {
+    const updated = await apiClient.put<Clip>(`/api/v1/clips/${clip.id}`, data)
+    setClips((prev) => prev.map((c) => (c.id === updated.id ? updated : c)))
+    showToast('Clip actualizado', 'success')
+  }, [showToast])
+
+  const handleDelete = useCallback(async (clip: Clip) => {
+    if (!confirm(`Eliminar "${clip.name}"?`)) return
+    try {
+      await apiClient.del(`/api/v1/clips/${clip.id}`)
+      setClips((prev) => prev.filter((c) => c.id !== clip.id))
+      showToast('Clip eliminado', 'success')
+    } catch {
+      showToast('Error al eliminar el clip', 'error')
+    }
+  }, [showToast])
 
   const handleUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -92,7 +109,7 @@ const LibraryPage = () => {
             <Tooltip text="Importa audio desde un video de YouTube" position="left">
               <Link
                 to="/youtube"
-                className="h-10 px-3 bg-red-600 rounded-lg flex items-center gap-1.5 text-sm font-medium text-white hover:bg-red-500 transition-colors"
+                className="h-10 px-3 bg-red-600 rounded-xl flex items-center gap-1.5 text-sm font-medium text-white hover:bg-red-500 transition-colors active:scale-[0.98]"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M19.59 6.69a4.83 4.83 0 01-3.77-2.75 12.65 12.65 0 00-8.45 0A4.83 4.83 0 013.6 6.69 46.09 46.09 0 003 12a46.09 46.09 0 00.6 5.31 4.83 4.83 0 003.77 2.75 12.65 12.65 0 008.45 0 4.83 4.83 0 003.77-2.75A46.09 46.09 0 0021 12a46.09 46.09 0 00-.41-5.31zM9.75 15V9l5.25 3-5.25 3z" />
@@ -103,7 +120,7 @@ const LibraryPage = () => {
             <Tooltip text="Subi un archivo de audio desde tu celular" position="left">
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="h-10 w-10 bg-brand-500 rounded-lg flex items-center justify-center hover:bg-brand-600 transition-colors"
+                className="h-10 w-10 bg-brand-500 rounded-xl flex items-center justify-center hover:bg-brand-600 transition-colors active:scale-[0.98]"
                 aria-label="Subir clip de audio"
               >
                 <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -159,23 +176,23 @@ const LibraryPage = () => {
             ))}
           </div>
         ) : clips.length === 0 ? (
-          <div className="text-center py-16 text-slate-500">
+          <div className="bg-slate-800/60 border border-slate-700/50 border-dashed rounded-xl p-8 text-center">
             <svg className="w-14 h-14 mx-auto mb-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                 d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
             </svg>
-            <p className="font-medium text-slate-400">Todavia no tenes clips</p>
-            <p className="text-sm mt-1">Subi uno o importa desde YouTube</p>
+            <p className="text-sm text-slate-500 font-medium">Todavia no tenes clips</p>
+            <p className="text-xs text-slate-600 mt-1">Subi uno o importa desde YouTube</p>
             <div className="flex gap-2 justify-center mt-4">
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="px-4 py-2 bg-brand-500 text-white text-sm rounded-lg hover:bg-brand-600 transition-colors"
+                className="px-4 py-2 bg-brand-500 text-white text-sm rounded-xl hover:bg-brand-600 transition-colors active:scale-[0.98]"
               >
                 Subir archivo
               </button>
               <Link
                 to="/youtube"
-                className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+                className="px-4 py-2 bg-red-600 text-white text-sm rounded-xl hover:bg-red-700 transition-colors active:scale-[0.98]"
               >
                 Desde YouTube
               </Link>
@@ -188,6 +205,8 @@ const LibraryPage = () => {
                 key={clip.id}
                 clip={clip}
                 onPlay={handlePlay}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
                 isPlaying={playingId === clip.id}
               />
             ))}

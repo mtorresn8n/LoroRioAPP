@@ -131,11 +131,11 @@ const ApiKeysPage = () => {
   const configuredCount = settings.filter((s) => s.is_configured).length
 
   return (
-    <div className="p-4 space-y-5 pb-10 max-w-lg mx-auto">
+    <div className="flex flex-col gap-5 p-4 pb-10 max-w-lg md:max-w-2xl mx-auto w-full">
       {/* Header */}
       <div className="pt-2">
         <h1 className="text-xl font-bold text-slate-100">API Keys & Integraciones</h1>
-        <p className="text-slate-400 text-sm mt-1">
+        <p className="text-slate-400 text-sm mt-0.5">
           Conecta los servicios de IA para habilitar funciones avanzadas
         </p>
       </div>
@@ -163,13 +163,13 @@ const ApiKeysPage = () => {
 
       {/* API Keys list */}
       {loading ? (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="bg-slate-800 rounded-xl h-28 animate-pulse" />
           ))}
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           {settings.map((setting) => {
             const info = PROVIDER_INFO[setting.key]
             return (
@@ -214,13 +214,13 @@ const ApiKeysPage = () => {
                       <button
                         onClick={() => void handleSave(setting.key)}
                         disabled={saving}
-                        className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-600 text-white text-sm font-medium py-2.5 rounded-xl transition-colors min-h-[40px]"
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] disabled:bg-slate-600 text-white text-sm font-medium py-2.5 rounded-xl transition-colors min-h-[40px]"
                       >
                         {saving ? 'Guardando...' : 'Guardar'}
                       </button>
                       <button
                         onClick={handleCancel}
-                        className="px-4 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm font-medium py-2.5 rounded-xl transition-colors min-h-[40px]"
+                        className="px-4 bg-slate-700 hover:bg-slate-600 active:scale-[0.98] text-slate-300 text-sm font-medium py-2.5 rounded-xl transition-colors min-h-[40px]"
                       >
                         Cancelar
                       </button>
@@ -241,7 +241,7 @@ const ApiKeysPage = () => {
                           <button
                             onClick={() => void handleTest(setting.key)}
                             disabled={testing === setting.key}
-                            className="px-3 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 text-white text-xs font-medium py-2 rounded-lg transition-colors min-h-[36px]"
+                            className="px-3 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] disabled:bg-slate-600 text-white text-xs font-medium py-2 rounded-lg transition-colors min-h-[36px]"
                           >
                             {testing === setting.key ? '...' : 'Verificar'}
                           </button>
@@ -249,7 +249,7 @@ const ApiKeysPage = () => {
                       )}
                       <button
                         onClick={() => handleEdit(setting)}
-                        className="px-3 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium py-2 rounded-lg transition-colors min-h-[36px]"
+                        className="px-3 bg-slate-700 hover:bg-slate-600 active:scale-[0.98] text-slate-300 text-xs font-medium py-2 rounded-lg transition-colors min-h-[36px]"
                       >
                         {setting.is_configured ? 'Editar' : 'Configurar'}
                       </button>
@@ -286,7 +286,7 @@ const ApiKeysPage = () => {
 
       {/* Help box */}
       <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-slate-300">Como obtener las API Keys</h3>
+        <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Como obtener las API Keys</h3>
         <div className="space-y-2">
           {Object.values(PROVIDER_INFO).filter((p) => p.name !== 'ElevenLabs Voice ID').map((provider) => (
             <div key={provider.name} className="flex items-start gap-2">
