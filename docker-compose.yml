@@ -25,7 +25,9 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://loroapp:${DB_PASSWORD:-loroapp_secret}@db:5432/loroapp
       MEDIA_PATH: /app/media
-      CORS_ORIGINS: '["*"]'
+      CORS_ORIGINS: '["http://localhost:80", "http://localhost:5173"]'
+      AUTH_USER: ${AUTH_USER:-mtorres}
+      AUTH_PASS: ${AUTH_PASS:-Password01}
     volumes:
       - media_data:/app/media
     ports:
