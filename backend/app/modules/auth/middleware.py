@@ -13,10 +13,10 @@ Receive = Any
 Send = Any
 ASGIApp = Any
 
-# Paths that don't require authentication
-PUBLIC_PATHS = {
-    "/api/v1/auth/login",
-    "/health",
+# Paths that don't require authentication (method, path)
+PUBLIC_PATHS: set[tuple[str, str]] = {
+    ("POST", "/api/v1/auth/login"),
+    ("GET", "/health"),
 }
 
 # Path prefixes that don't require authentication
@@ -40,8 +40,8 @@ class AuthMiddleware:
         path: str = scope.get("path", "")
         method: str = scope.get("method", "GET")
 
-        # Allow public paths
-        if path in PUBLIC_PATHS:
+        # Allow public paths (method + path match)
+        if (method, path) in PUBLIC_PATHS:
             await self.app(scope, receive, send)
             return
 
