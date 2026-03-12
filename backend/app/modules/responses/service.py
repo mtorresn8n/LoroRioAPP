@@ -126,7 +126,7 @@ async def _execute_response_action(rule: ResponseRule) -> None:
     from app.modules.station.commands import PlayCommand, RecordCommand
     from app.modules.station.websocket import connection_manager
 
-    if not connection_manager.is_connected:
+    if not connection_manager.station_connected:
         logger.debug("Response action skipped: station not connected")
         return
 

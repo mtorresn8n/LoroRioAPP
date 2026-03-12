@@ -20,7 +20,7 @@ from app.modules.responses.router import router as responses_router
 from app.modules.responses.service import register_event_handlers
 from app.modules.scheduler.router import router as scheduler_router
 from app.modules.scheduler.service import bootstrap_scheduler, scheduler
-from app.modules.station.websocket import station_websocket_handler
+from app.modules.station.websocket import station_websocket_handler, control_websocket_handler
 from app.modules.training.router import router as training_router
 from app.modules.ai.router import router as ai_router
 from app.modules.settings.router import router as settings_router
@@ -115,10 +115,15 @@ app.include_router(parrot_router, prefix=API_PREFIX)
 app.include_router(feeding_router, prefix=API_PREFIX)
 
 
-# WebSocket endpoint
+# WebSocket endpoints
 @app.websocket("/ws/station")
 async def ws_station(websocket: WebSocket) -> None:
     await station_websocket_handler(websocket)
+
+
+@app.websocket("/ws/control")
+async def ws_control(websocket: WebSocket) -> None:
+    await control_websocket_handler(websocket)
 
 
 @app.get("/health")

@@ -77,7 +77,7 @@ async def start_session(db: AsyncSession, session_id: uuid.UUID) -> dict[str, st
     """Build step list from session config and send SessionStartCommand via WebSocket."""
     session = await get_session(db, session_id)
 
-    if not connection_manager.is_connected:
+    if not connection_manager.station_connected:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Station is not connected",

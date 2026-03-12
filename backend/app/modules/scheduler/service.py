@@ -51,7 +51,7 @@ async def _execute_schedule_actions(schedule_id: str) -> None:
 
 async def _dispatch_action(action: ScheduleAction) -> None:
     """Send the appropriate WebSocket command for a schedule action."""
-    if not connection_manager.is_connected:
+    if not connection_manager.station_connected:
         logger.warning("Schedule action skipped: station not connected")
         return
 
