@@ -22,13 +22,14 @@ const LoginPage = () => {
 
       if (!res.ok) {
         const data = await res.json().catch(() => null) as Record<string, unknown> | null
-        setError((data?.['detail'] as string | undefined) ?? 'Credenciales invalidas')
+        const detail = data?.['detail']
+        setError(typeof detail === 'string' ? detail : 'Credenciales inválidas')
         return
       }
 
       window.location.href = '/'
     } catch {
-      setError('Error de conexion con el servidor')
+      setError('Error de conexión con el servidor')
     } finally {
       setLoading(false)
     }
@@ -46,7 +47,7 @@ const LoginPage = () => {
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-slate-100">LoroApp</h1>
-          <p className="text-slate-500 text-sm mt-1">Inicia sesion para continuar</p>
+          <p className="text-slate-500 text-sm mt-1">Inicia sesión para continuar</p>
         </div>
 
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
@@ -67,7 +68,7 @@ const LoginPage = () => {
 
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-slate-400 mb-1">
-              Contrasena
+              Contraseña
             </label>
             <input
               id="password"
@@ -91,7 +92,7 @@ const LoginPage = () => {
             disabled={loading}
             className="w-full bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-bold py-3 rounded-lg transition-colors"
           >
-            {loading ? 'Ingresando...' : 'Iniciar sesion'}
+            {loading ? 'Ingresando...' : 'Iniciar sesión'}
           </button>
         </form>
       </div>
