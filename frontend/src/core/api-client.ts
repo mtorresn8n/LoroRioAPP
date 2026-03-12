@@ -28,6 +28,11 @@ export class ApiError extends Error {
 }
 
 async function parseResponse<T>(res: Response): Promise<T> {
+  if (res.status === 401 && !window.location.pathname.startsWith('/login')) {
+    window.location.href = '/login'
+    return new Promise(() => {}) // Never resolves — page is navigating
+  }
+
   const contentType = res.headers.get('content-type') ?? ''
 
   if (!res.ok) {
@@ -66,6 +71,7 @@ export const apiClient = {
     const res = await fetch(buildUrl(path, params), {
       method: 'GET',
       headers: { 'Accept': 'application/json' },
+      credentials: 'include',
     })
     return parseResponse<T>(res)
   },
@@ -77,6 +83,7 @@ export const apiClient = {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: body !== undefined ? JSON.stringify(body) : undefined,
     })
     return parseResponse<T>(res)
@@ -89,6 +96,7 @@ export const apiClient = {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: body !== undefined ? JSON.stringify(body) : undefined,
     })
     return parseResponse<T>(res)
@@ -98,6 +106,7 @@ export const apiClient = {
     const res = await fetch(buildUrl(path), {
       method: 'DELETE',
       headers: { 'Accept': 'application/json' },
+      credentials: 'include',
     })
     return parseResponse<T>(res)
   },
@@ -113,6 +122,7 @@ export const apiClient = {
     const res = await fetch(buildUrl(path), {
       method: 'POST',
       headers: { 'Accept': 'application/json' },
+      credentials: 'include',
       body: formData,
     })
     return parseResponse<T>(res)

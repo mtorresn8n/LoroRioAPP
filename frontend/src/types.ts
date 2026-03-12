@@ -283,6 +283,16 @@ export type WsEventType =
   | 'start_session'
   | 'pause'
   | 'resume'
+  | 'station_status'
+  | 'station_connected'
+  | 'station_disconnected'
+  | 'station_heartbeat'
+  | 'control_connected'
+  | 'control_disconnected'
+  | 'webrtc_offer'
+  | 'webrtc_answer'
+  | 'webrtc_ice_candidate'
+  | 'webrtc_reset'
 
 export interface WsCommand {
   type: WsCommandType
@@ -303,6 +313,9 @@ export interface WsEvent {
   timestamp?: string
   message?: string
   payload?: Record<string, unknown>
+  // Signaling fields
+  sdp?: string
+  candidate?: RTCIceCandidateInit
 }
 
 // ── Stats & station types ─────────────────────────────────────────────────────
@@ -446,3 +459,38 @@ export interface PaginatedResponse<T> {
   page: number
   per_page: number
 }
+
+// ── Signaling types ─────────────────────────────────────────────────────────
+
+export type SignalingMessage =
+  | { type: 'webrtc_offer'; sdp: string }
+  | { type: 'webrtc_answer'; sdp: string }
+  | { type: 'webrtc_ice_candidate'; candidate: RTCIceCandidateInit }
+  | { type: 'webrtc_reset' }
+
+export interface StationStatusMessage {
+  type: 'station_status'
+  detection_active: boolean
+  is_recording: boolean
+  is_playing: boolean
+  is_paused: boolean
+  uptime_seconds: number
+  last_sound_at: string | null
+  stats: {
+    clips_played: number
+    recordings_made: number
+    sessions_completed: number
+    sounds_detected: number
+  }
+}
+
+export interface StationHeartbeatMessage {
+  type: 'station_heartbeat'
+  battery: number | null
+  firmware_version: string | null
+  last_heartbeat: string
+}
+
+// ── Connection state (extended for auth) ────────────────────────────────────
+
+export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error' | 'auth_failed' | 'replaced'
