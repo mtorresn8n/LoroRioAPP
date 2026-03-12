@@ -15,6 +15,7 @@ const SettingsPage = lazy(() => import('@/app/settings/page'))
 const StationPage = lazy(() => import('@/app/station/page'))
 const ParrotPage = lazy(() => import('@/app/parrot/page'))
 const FeedingPage = lazy(() => import('@/app/feeding/page'))
+const LoginPage = lazy(() => import('@/app/login/page'))
 
 const PageLoader = () => (
   <div className="flex flex-col items-center justify-center h-full min-h-[200px] gap-3">
@@ -26,6 +27,7 @@ const PageLoader = () => (
 const AppRouter = () => (
   <Suspense fallback={<PageLoader />}>
     <Routes>
+      <Route path="login" element={<LoginPage />} />
       <Route element={<Layout />}>
         <Route index element={<DashboardPage />} />
         <Route path="library" element={<LibraryPage />} />
