@@ -16,6 +16,7 @@ const StationPage = lazy(() => import('@/app/station/page'))
 const ParrotPage = lazy(() => import('@/app/parrot/page'))
 const FeedingPage = lazy(() => import('@/app/feeding/page'))
 const LoginPage = lazy(() => import('@/app/login/page'))
+const RemoteControlPage = lazy(() => import('@/app/remote-control/page'))
 
 const PageLoader = () => (
   <div className="flex flex-col items-center justify-center h-full min-h-[200px] gap-3">
@@ -42,6 +43,7 @@ const AppRouter = () => (
         <Route path="station" element={<StationPage />} />
         <Route path="parrot" element={<ParrotPage />} />
         <Route path="feeding" element={<FeedingPage />} />
+        <Route path="remote-control" element={<RemoteControlPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
