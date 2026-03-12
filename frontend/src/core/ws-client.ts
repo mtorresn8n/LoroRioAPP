@@ -1,6 +1,6 @@
 // WebSocket manager with auto-reconnect and heartbeat
 
-import type { WsCommand, WsEvent, WsEventType } from '@/types'
+import type { ConnectionState, WsCommand, WsEvent, WsEventType } from '@/types'
 
 import { getApiBaseUrl } from '@/core/api-client'
 
@@ -11,8 +11,6 @@ const getWsUrl = (): string => {
 };
 const HEARTBEAT_INTERVAL = 15_000
 const MAX_BACKOFF = 30_000
-
-export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error'
 
 type CommandHandler = (event: WsEvent) => void
 
@@ -46,6 +44,12 @@ class WsClient {
   send(command: WsCommand): void {
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(command))
+    }
+  }
+
+  sendRaw(message: Record<string, unknown>): void {
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      this.socket.send(JSON.stringify(message))
     }
   }
 
@@ -88,8 +92,22 @@ class WsClient {
     if (wildcard) wildcard.forEach((h) => h(parsed))
   }
 
-  private handleClose = (): void => {
+  private handleClose = (event: CloseEvent): void => {
     this.clearTimers()
+
+    if (event.code === 4001) {
+      this.setState('auth_failed')
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login'
+      }
+      return
+    }
+
+    if (event.code === 4002) {
+      this.setState('replaced')
+      return
+    }
+
     this.setState('disconnected')
     this.scheduleReconnect()
   }
