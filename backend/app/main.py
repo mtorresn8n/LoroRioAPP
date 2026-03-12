@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import async_session_factory
+from app.modules.auth.middleware import AuthMiddleware
 from app.modules.clips.router import router as clips_router
 from app.modules.feeding.router import router as feeding_router
 from app.modules.feeding.service import seed_default_foods
@@ -71,13 +72,13 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS middleware
-# When origins is ["*"], credentials must be False (Starlette requirement)
-_cors_credentials = settings.CORS_ORIGINS != ["*"]
+# Middleware — Starlette uses LIFO order:
+# AuthMiddleware added FIRST (inner), CORS added SECOND (outer — wraps 401 responses)
+app.add_middleware(AuthMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=_cors_credentials,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
