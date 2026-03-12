@@ -17,8 +17,8 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:80", "http://localhost:8000"]
 
     # Auth settings
-    AUTH_USER: str = ""
-    AUTH_PASS: str = ""
+    AUTH_USER: str = "mtorres"
+    AUTH_PASS: str = "Password01"
     AUTH_SECRET: str = ""
     AUTH_MAX_AGE_DAYS: int = 30
 

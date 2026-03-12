@@ -36,11 +36,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    if not settings.AUTH_USER or not settings.AUTH_PASS:
-        logger.error("AUTH_USER and AUTH_PASS must be set. Exiting.")
-        raise SystemExit(1)
-
-    logger.info("Starting LoroApp backend...")
+    logger.info("Starting LoroApp backend (auth user: %s)...", settings.AUTH_USER)
 
     # Register event bus handlers for response engine
     register_event_handlers()
