@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { wsClient, type ConnectionState } from '@/core/ws-client'
-import type { WsCommand, WsEvent, WsEventType } from '@/types'
+import { wsClient } from '@/core/ws-client'
+import type { ConnectionState, WsCommand, WsEvent, WsEventType } from '@/types'
 
 export function useWebSocket(autoConnect = false) {
   const [connectionState, setConnectionState] = useState<ConnectionState>(wsClient.state)
