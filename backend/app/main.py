@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.database import async_session_factory
 from app.modules.auth.middleware import AuthMiddleware
+from app.modules.auth.router import router as auth_router
 from app.modules.clips.router import router as clips_router
 from app.modules.feeding.router import router as feeding_router
 from app.modules.feeding.service import seed_default_foods
@@ -101,6 +102,7 @@ app.mount("/media", StaticFiles(directory=settings.MEDIA_PATH), name="media")
 # API routers
 API_PREFIX = "/api/v1"
 
+app.include_router(auth_router, prefix=API_PREFIX)
 app.include_router(clips_router, prefix=API_PREFIX)
 app.include_router(youtube_router, prefix=API_PREFIX)
 app.include_router(recordings_router, prefix=API_PREFIX)
