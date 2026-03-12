@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiClient, getApiBaseUrl } from '@/core/api-client'
 import { AudioEngine } from '@/core/audio-engine'
@@ -7,6 +7,9 @@ import { AudioRecorder } from '@/core/recorder'
 import { VolumeMeter } from '@/components/volume-meter'
 import { useWakeLock } from '@/hooks/use-wakelock'
 import { useWebSocket, useWsCommand } from '@/hooks/use-websocket'
+import { useWebRTC } from '@/hooks/use-webrtc'
+import { useCamera } from '@/hooks/use-camera'
+import { wsClient } from '@/core/ws-client'
 import type { DailyStats, StationStatus, UpcomingEvent, WsEvent } from '@/types'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -41,6 +44,23 @@ const StationPage = () => {
   const [playingRecId, setPlayingRecId] = useState<string | null>(null)
   const [showHistory, setShowHistory] = useState(false)
   const recAudioRef = useRef<HTMLAudioElement | null>(null)
+
+  // ── WebRTC + Camera state ────────────────────────────────────────────
+  const [ownerConnected, setOwnerConnected] = useState(false)
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null)
+
+  const { videoRef: cameraPreviewRef, start: startCamera, stop: stopCamera, isActive: cameraActive } = useCamera()
+
+  const { start: startWebRTC, stop: stopWebRTC, handleSignaling, connectionState: rtcState } = useWebRTC({
+    role: 'answerer',
+    onRemoteStream: (stream) => {
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = stream
+        remoteAudioRef.current.play().catch(() => {})
+      }
+    },
+    sendSignaling: (msg) => wsClient.sendRaw(msg as unknown as Record<string, unknown>),
+  })
 
   const AUTO_RECORD_DURATION_MS = 10_000
   const engineRef = useRef(new AudioEngine())
@@ -112,7 +132,15 @@ const StationPage = () => {
     } catch {
       setDetectionActive(false)
     }
-  }, [acquireWakeLock, connect, send, autoRecord])
+
+    // Start camera for WebRTC
+    try {
+      const mediaStream = await startCamera({ video: { facingMode: 'environment' }, audio: true })
+      await startWebRTC(mediaStream)
+    } catch {
+      // Camera denied — WebRTC won't work but station still functions
+    }
+  }, [acquireWakeLock, connect, send, autoRecord, startCamera, startWebRTC])
 
   const handleStopStation = useCallback(() => {
     setStationActive(false)
@@ -137,7 +165,10 @@ const StationPage = () => {
     }
     releaseWakeLock()
     wsDisconnect()
-  }, [releaseWakeLock, wsDisconnect])
+    stopWebRTC()
+    stopCamera()
+    setOwnerConnected(false)
+  }, [releaseWakeLock, wsDisconnect, stopWebRTC, stopCamera])
 
   const handleStopAndGoHome = useCallback(() => {
     handleStopStation()
@@ -165,6 +196,26 @@ const StationPage = () => {
     }, 1_000)
     return () => clearInterval(id)
   }, [stationActive, startTime])
+
+  // ── Emit station_status every 10 seconds ────────────────────────────
+
+  useEffect(() => {
+    if (!stationActive) return
+    const emitStatus = () => {
+      wsClient.sendRaw({
+        type: 'station_status',
+        detection_active: detectionActive,
+        is_recording: isRecording,
+        is_playing: isPlaying,
+        is_paused: isPaused,
+        uptime_seconds: uptime,
+        last_sound_at: lastSoundTime?.toISOString() ?? null,
+        stats: stats ?? { clips_played: 0, recordings_made: 0, sessions_completed: 0, sounds_detected: 0 },
+      })
+    }
+    const id = setInterval(emitStatus, 10_000)
+    return () => clearInterval(id)
+  }, [stationActive, detectionActive, isRecording, isPlaying, isPaused, uptime, lastSoundTime, stats])
 
   // ── Load stats + recordings periodically ────────────────────────────
 
@@ -255,6 +306,22 @@ const StationPage = () => {
   useWsCommand('stop', handleStopCommand)
   useWsCommand('start_recording', handleStartRecording)
   useWsCommand('stop_recording', handleStopRecording)
+
+  useWsCommand('webrtc_offer', (e) => {
+    if (e.sdp) void handleSignaling({ type: 'webrtc_offer', sdp: e.sdp })
+  })
+  useWsCommand('webrtc_ice_candidate', (e) => {
+    if (e.candidate) void handleSignaling({ type: 'webrtc_ice_candidate', candidate: e.candidate })
+  })
+  useWsCommand('webrtc_reset', () => {
+    void handleSignaling({ type: 'webrtc_reset' })
+    setOwnerConnected(false)
+  })
+  useWsCommand('control_connected', () => setOwnerConnected(true))
+  useWsCommand('control_disconnected', () => {
+    setOwnerConnected(false)
+    void handleSignaling({ type: 'webrtc_reset' })
+  })
   useWsCommand('clip_started', (e) => {
     setIsPlaying(true)
     setCurrentClipName(e.clip_name ?? null)
@@ -421,6 +488,9 @@ const StationPage = () => {
           {isPaused && (
             <span className="bg-yellow-900/40 text-yellow-400 px-2 py-0.5 rounded-md">Pausado</span>
           )}
+          {ownerConnected && (
+            <span className="bg-brand-900/40 text-brand-400 px-2 py-0.5 rounded-md">Dueno conectado</span>
+          )}
         </div>
       </div>
 
@@ -565,6 +635,22 @@ const StationPage = () => {
         </div>
       </div>
 
+      {/* ── Camera preview (floating) ────────────────────────────────── */}
+      {cameraActive && (
+        <div className="fixed bottom-24 right-4 w-24 h-32 rounded-xl overflow-hidden border-2 border-slate-700 shadow-lg z-20">
+          <video
+            ref={cameraPreviewRef as React.RefObject<HTMLVideoElement>}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-full object-cover"
+          />
+          {rtcState === 'connected' && (
+            <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-400" />
+          )}
+        </div>
+      )}
+
       {/* ── Bottom controls ──────────────────────────────────────────── */}
       <div className="shrink-0 bg-slate-900 border-t border-slate-800 px-4 pt-3 pb-5 space-y-2.5">
 
@@ -643,6 +729,9 @@ const StationPage = () => {
           </button>
         </div>
       </div>
+
+      {/* Hidden audio for remote stream from owner */}
+      <audio ref={remoteAudioRef} autoPlay />
     </div>
   )
 }
