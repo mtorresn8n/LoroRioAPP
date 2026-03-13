@@ -421,7 +421,10 @@ const RemoteControlPage = () => {
             <div className="grid grid-cols-2 gap-2">
               {/* Play random */}
               <button
-                onClick={() => sendAction('play_random')}
+                onClick={() => {
+                  sendAction('play_random')
+                  setHostStatus(prev => ({ ...prev, isPlaying: true }))
+                }}
                 disabled={!hostStatus.connected || hostStatus.isPaused}
                 className="h-16 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm transition-colors active:scale-[0.97] flex flex-col items-center justify-center gap-1 touch-manipulation"
               >
@@ -433,7 +436,11 @@ const RemoteControlPage = () => {
 
               {/* Start recording */}
               <button
-                onClick={() => sendAction(hostStatus.isRecording ? 'stop_recording' : 'start_recording')}
+                onClick={() => {
+                  const action = hostStatus.isRecording ? 'stop_recording' : 'start_recording'
+                  sendAction(action)
+                  setHostStatus(prev => ({ ...prev, isRecording: !prev.isRecording }))
+                }}
                 disabled={!hostStatus.connected}
                 className={`h-16 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed font-bold text-sm transition-colors active:scale-[0.97] flex flex-col items-center justify-center gap-1 touch-manipulation ${
                   hostStatus.isRecording
@@ -460,7 +467,10 @@ const RemoteControlPage = () => {
 
               {/* Stop */}
               <button
-                onClick={() => sendAction('stop')}
+                onClick={() => {
+                  sendAction('stop')
+                  setHostStatus(prev => ({ ...prev, isPlaying: false }))
+                }}
                 disabled={!hostStatus.connected || !hostStatus.isPlaying}
                 className="h-16 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-200 font-bold text-sm transition-colors active:scale-[0.97] flex flex-col items-center justify-center gap-1 touch-manipulation"
               >
@@ -472,7 +482,10 @@ const RemoteControlPage = () => {
 
               {/* Pause / Resume */}
               <button
-                onClick={() => sendAction(hostStatus.isPaused ? 'resume' : 'pause')}
+                onClick={() => {
+                  sendAction(hostStatus.isPaused ? 'resume' : 'pause')
+                  setHostStatus(prev => ({ ...prev, isPaused: !prev.isPaused }))
+                }}
                 disabled={!hostStatus.connected}
                 className={`h-16 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed font-bold text-sm transition-colors active:scale-[0.97] flex flex-col items-center justify-center gap-1 touch-manipulation ${
                   hostStatus.isPaused
