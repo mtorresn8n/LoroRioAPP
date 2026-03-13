@@ -40,8 +40,8 @@ async def login(body: LoginRequest, response: Response) -> LoginResponse:
         value=token,
         max_age=get_cookie_max_age(),
         httponly=True,
-        samesite="strict",
-        secure=False,  # Set to True in production with HTTPS
+        samesite="none",
+        secure=True,
         path="/",
     )
     return LoginResponse(user=body.user, message="Login successful")
@@ -54,7 +54,8 @@ async def logout(response: Response) -> dict[str, str]:
         key=COOKIE_NAME,
         path="/",
         httponly=True,
-        samesite="strict",
+        samesite="none",
+        secure=True,
     )
     return {"message": "Logged out"}
 
