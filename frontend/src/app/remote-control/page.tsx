@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { controlWsClient } from '@/core/control-ws-client'
+import { apiClient } from '@/core/api-client'
 import { useWebRTC } from '@/hooks/use-webrtc'
-import type { ConnectionState, SignalingMessage, WsEvent } from '@/types'
+import type { ConnectionState, Session, SignalingMessage, WsEvent } from '@/types'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -20,6 +21,15 @@ interface HostStatus {
     sessionsCompleted: number
     soundsDetected: number
   }
+}
+
+interface SessionProgress {
+  stepIndex: number
+  totalSteps: number
+  currentRep: number
+  totalReps: number
+  state: string
+  clipName: string | null
 }
 
 const initialHostStatus: HostStatus = {
@@ -62,6 +72,12 @@ const RemoteControlPage = () => {
   const [playingIndicator, setPlayingIndicator] = useState(false)
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null)
   const localStreamRef = useRef<MediaStream | null>(null)
+
+  // ── Session state ────────────────────────────────────────────────────
+  const [sessions, setSessions] = useState<Session[]>([])
+  const [selectedSessionId, setSelectedSessionId] = useState<string>('')
+  const [activeSession, setActiveSession] = useState<Session | null>(null)
+  const [sessionProgress, setSessionProgress] = useState<SessionProgress | null>(null)
 
   const sendSignaling = useCallback((msg: SignalingMessage) => {
     controlWsClient.sendRaw(msg as unknown as Record<string, unknown>)
@@ -112,6 +128,14 @@ const RemoteControlPage = () => {
     }
   }, [])
 
+  // Load sessions on mount
+  useEffect(() => {
+    apiClient.get<Session[]>('/api/v1/training/sessions/').then((data) => {
+      setSessions(data)
+      if (data.length > 0) setSelectedSessionId(data[0].id)
+    }).catch(() => {/* silent */})
+  }, [])
+
   // Handle WS events
   useEffect(() => {
     const handlers: Array<() => void> = []
@@ -125,6 +149,8 @@ const RemoteControlPage = () => {
       stopRTC()
       setRtcActive(false)
       setRemoteStream(null)
+      setActiveSession(null)
+      setSessionProgress(null)
     }))
 
     handlers.push(controlWsClient.onCommand('station_status', (e: WsEvent) => {
@@ -176,6 +202,23 @@ const RemoteControlPage = () => {
       setPlayingIndicator(false)
     }))
 
+    handlers.push(controlWsClient.onCommand('session_progress', (e: WsEvent) => {
+      const p = e as unknown as Record<string, unknown>
+      setSessionProgress({
+        stepIndex: (p['stepIndex'] as number) ?? 0,
+        totalSteps: (p['totalSteps'] as number) ?? 0,
+        currentRep: (p['currentRep'] as number) ?? 1,
+        totalReps: (p['totalReps'] as number) ?? 1,
+        state: (p['state'] as string) ?? 'playing',
+        clipName: (p['clipName'] as string | null) ?? null,
+      })
+    }))
+
+    handlers.push(controlWsClient.onCommand('session_finished', () => {
+      setActiveSession(null)
+      setSessionProgress(null)
+    }))
+
     return () => handlers.forEach(unsub => unsub())
   }, [handleSignaling, stopRTC])
 
@@ -201,20 +244,13 @@ const RemoteControlPage = () => {
     setRemoteStream(null)
   }, [stopRTC])
 
-  // Push-to-talk
-  const handlePTTDown = useCallback(() => {
-    if (localAudioTrack) {
-      localAudioTrack.enabled = true
-      setPttActive(true)
-    }
-  }, [localAudioTrack])
-
-  const handlePTTUp = useCallback(() => {
-    if (localAudioTrack) {
-      localAudioTrack.enabled = false
-      setPttActive(false)
-    }
-  }, [localAudioTrack])
+  // Mic toggle (tap to enable, tap again to disable)
+  const handleMicToggle = useCallback(() => {
+    if (!localAudioTrack) return
+    const next = !pttActive
+    localAudioTrack.enabled = next
+    setPttActive(next)
+  }, [localAudioTrack, pttActive])
 
   // Photo capture
   const handleCapturePhoto = useCallback(() => {
@@ -236,6 +272,22 @@ const RemoteControlPage = () => {
   // Quick actions
   const sendAction = useCallback((type: string, extra?: Record<string, unknown>) => {
     controlWsClient.sendRaw({ type, ...extra })
+  }, [])
+
+  // Start session
+  const handleStartSession = useCallback(() => {
+    if (!selectedSessionId) return
+    const session = sessions.find((s) => s.id === selectedSessionId) ?? null
+    setActiveSession(session)
+    setSessionProgress(null)
+    controlWsClient.sendRaw({ type: 'start_session', session_id: selectedSessionId })
+  }, [selectedSessionId, sessions])
+
+  // Stop session
+  const handleStopSession = useCallback(() => {
+    controlWsClient.sendRaw({ type: 'stop_session' })
+    setActiveSession(null)
+    setSessionProgress(null)
   }, [])
 
   // ── Connection state colors ──────────────────────────────────────────────────
@@ -402,35 +454,25 @@ const RemoteControlPage = () => {
                 </button>
               )}
 
-              {/* Push-to-talk */}
-              <button
-                onMouseDown={handlePTTDown}
-                onMouseUp={handlePTTUp}
-                onTouchStart={(e) => { e.preventDefault(); handlePTTDown() }}
-                onTouchEnd={(e) => { e.preventDefault(); handlePTTUp() }}
-                disabled={!rtcActive || !localAudioTrack}
-                title="Mantener presionado para hablar"
-                className={`w-12 h-9 rounded-lg font-bold text-xs transition-all border touch-manipulation select-none ${
-                  pttActive
-                    ? 'bg-emerald-500 border-emerald-400 text-white scale-95'
-                    : rtcActive && localAudioTrack
-                      ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
-                      : 'bg-slate-800/50 border-slate-800 text-slate-600 cursor-not-allowed'
-                }`}
-              >
-                <svg className="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-              </button>
             </div>
           </div>
 
-          {/* PTT hint */}
+          {/* Mic toggle button — only shown when WebRTC is connected with a mic track */}
           {rtcActive && localAudioTrack && (
-            <p className="text-slate-600 text-xs text-center">
-              Manten presionado el microfono para hablar (walkie talkie)
-            </p>
+            <button
+              onClick={handleMicToggle}
+              className={`w-full h-14 rounded-xl font-bold text-sm transition-all border touch-manipulation select-none flex items-center justify-center gap-2.5 ${
+                pttActive
+                  ? 'bg-emerald-600 border-emerald-500 text-white hover:bg-emerald-500'
+                  : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
+              {pttActive ? 'Microfono activo' : 'Activar microfono'}
+            </button>
           )}
 
         </div>
@@ -535,6 +577,95 @@ const RemoteControlPage = () => {
                 )}
               </button>
             </div>
+          </div>
+
+          {/* ── Sesiones ───────────────────────────────────────────────── */}
+          <div className="bg-slate-900 rounded-xl p-4 border border-slate-800">
+            <p className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">Sesiones</p>
+
+            {/* Active session progress */}
+            {activeSession && sessionProgress && (
+              <div className="mb-3 bg-brand-900/20 border border-brand-800/40 rounded-xl p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${sessionProgress.state === 'playing' ? 'bg-brand-400 animate-pulse' : 'bg-yellow-400'}`} />
+                    <p className="text-brand-300 text-xs font-semibold truncate">{activeSession.name}</p>
+                  </div>
+                  <button
+                    onClick={handleStopSession}
+                    className="shrink-0 text-[10px] text-slate-400 hover:text-red-400 bg-slate-800 hover:bg-red-900/30 border border-slate-700 hover:border-red-800/50 px-2 py-1 rounded-md transition-colors ml-2"
+                  >
+                    Detener
+                  </button>
+                </div>
+
+                {/* Step progress */}
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-brand-500 rounded-full transition-all duration-300"
+                      style={{ width: `${((sessionProgress.stepIndex + 1) / sessionProgress.totalSteps) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-slate-400 text-[10px] tabular-nums shrink-0">
+                    {`Paso ${sessionProgress.stepIndex + 1}/${sessionProgress.totalSteps}`}
+                  </span>
+                </div>
+
+                {/* Rep progress + clip name */}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-slate-500 text-[10px] truncate">
+                    {sessionProgress.clipName ?? 'Reproduciendo...'}
+                  </span>
+                  <span className="text-slate-400 text-[10px] tabular-nums shrink-0">
+                    {`Rep ${sessionProgress.currentRep}/${sessionProgress.totalReps}`}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Session selector + start button */}
+            {!activeSession && (
+              <div className="flex gap-2">
+                <select
+                  value={selectedSessionId}
+                  onChange={(e) => setSelectedSessionId(e.target.value)}
+                  disabled={!hostStatus.connected || sessions.length === 0}
+                  className="flex-1 bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2.5 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 min-w-0"
+                >
+                  {sessions.length === 0 ? (
+                    <option value="">Sin sesiones</option>
+                  ) : (
+                    sessions.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))
+                  )}
+                </select>
+                <button
+                  onClick={handleStartSession}
+                  disabled={!hostStatus.connected || !selectedSessionId || sessions.length === 0}
+                  className="shrink-0 px-4 py-2.5 bg-brand-600 hover:bg-brand-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm rounded-lg transition-colors active:scale-[0.97] touch-manipulation"
+                >
+                  Iniciar
+                </button>
+              </div>
+            )}
+
+            {/* Active session waiting for progress */}
+            {activeSession && !sessionProgress && (
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-brand-400 animate-pulse shrink-0" />
+                  <p className="text-brand-300 text-xs truncate">{activeSession.name}</p>
+                </div>
+                <button
+                  onClick={handleStopSession}
+                  className="shrink-0 text-[10px] text-slate-400 hover:text-red-400 bg-slate-800 hover:bg-red-900/30 border border-slate-700 hover:border-red-800/50 px-2 py-1 rounded-md transition-colors"
+                >
+                  Detener
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Host status */}

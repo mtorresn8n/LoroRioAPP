@@ -6,11 +6,13 @@ import { SoundDetector } from '@/core/detector'
 import { AudioRecorder } from '@/core/recorder'
 import { VolumeMeter } from '@/components/volume-meter'
 import { useWakeLock } from '@/hooks/use-wakelock'
+import { useKeepAlive } from '@/hooks/use-keep-alive'
 import { useWebSocket, useWsCommand } from '@/hooks/use-websocket'
 import { useWebRTC } from '@/hooks/use-webrtc'
 import { useCamera } from '@/hooks/use-camera'
 import { wsClient } from '@/core/ws-client'
-import type { DailyStats, StationStatus, UpcomingEvent, WsEvent } from '@/types'
+import type { DailyStats, Session, SessionStep, StationStatus, UpcomingEvent, WsEvent } from '@/types'
+import { getSessionSteps } from '@/types'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -21,12 +23,22 @@ interface RecentRecording {
   classification: string | null
 }
 
+interface RunningSession {
+  session: Session
+  stepIndex: number
+  totalSteps: number
+  currentRep: number
+  totalReps: number
+  state: 'playing' | 'waiting' | 'done'
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 const StationPage = () => {
   const navigate = useNavigate()
   const { connectionState, connect, disconnect: wsDisconnect, send } = useWebSocket()
   const { acquire: acquireWakeLock, release: releaseWakeLock, isActive: wakeLockActive } = useWakeLock()
+  const { activate: activateKeepAlive, deactivate: deactivateKeepAlive, isActive: keepAliveActive } = useKeepAlive()
 
   const [stationActive, setStationActive] = useState(false)
   const [volumeLevel, setVolumeLevel] = useState(0)
@@ -44,6 +56,10 @@ const StationPage = () => {
   const [playingRecId, setPlayingRecId] = useState<string | null>(null)
   const [showHistory, setShowHistory] = useState(false)
   const recAudioRef = useRef<HTMLAudioElement | null>(null)
+
+  // ── Session runner state ─────────────────────────────────────────────
+  const [runningSession, setRunningSession] = useState<RunningSession | null>(null)
+  const sessionAbortRef = useRef<boolean>(false)
 
   // ── WebRTC + Camera state ────────────────────────────────────────────
   const [ownerConnected, setOwnerConnected] = useState(false)
@@ -104,6 +120,119 @@ const StationPage = () => {
     }
   }, [isPaused])
 
+  // ── Session execution ────────────────────────────────────────────────
+
+  const playClipOnce = useCallback((clipId: string): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const engine = engineRef.current
+      const url = `${getApiBaseUrl()}/api/v1/clips/${clipId}/file`
+      engine.play(url).then(() => {
+        engine.onFinished = () => {
+          engine.onFinished = null
+          resolve()
+        }
+      }).catch(reject)
+    })
+  }, [])
+
+  const runSession = useCallback(async (session: Session) => {
+    const steps: SessionStep[] = getSessionSteps(session)
+    if (steps.length === 0) {
+      wsClient.sendRaw({ type: 'session_finished', session_id: session.id })
+      return
+    }
+
+    sessionAbortRef.current = false
+
+    for (let stepIdx = 0; stepIdx < steps.length; stepIdx++) {
+      if (sessionAbortRef.current) break
+      const step = steps[stepIdx]
+
+      for (let rep = 1; rep <= step.repetitions; rep++) {
+        if (sessionAbortRef.current) break
+
+        const progressPayload = {
+          type: 'session_progress',
+          session_id: session.id,
+          stepIndex: stepIdx,
+          totalSteps: steps.length,
+          currentRep: rep,
+          totalReps: step.repetitions,
+          state: 'playing',
+          clipName: step.clip_name ?? null,
+        }
+
+        setRunningSession({
+          session,
+          stepIndex: stepIdx,
+          totalSteps: steps.length,
+          currentRep: rep,
+          totalReps: step.repetitions,
+          state: 'playing',
+        })
+        wsClient.sendRaw(progressPayload)
+
+        try {
+          setIsPlaying(true)
+          setCurrentClipName(step.clip_name ?? null)
+          await playClipOnce(step.clip_id)
+          setIsPlaying(false)
+          setCurrentClipName(null)
+        } catch {
+          setIsPlaying(false)
+          setCurrentClipName(null)
+        }
+
+        if (sessionAbortRef.current) break
+
+        // Wait between reps (not after the last rep)
+        if (rep < step.repetitions && step.wait_seconds > 0) {
+          setRunningSession((prev) => prev ? { ...prev, state: 'waiting' } : null)
+          wsClient.sendRaw({ ...progressPayload, state: 'waiting' })
+          await new Promise<void>((resolve) => setTimeout(resolve, step.wait_seconds * 1_000))
+        }
+      }
+    }
+
+    if (!sessionAbortRef.current) {
+      setStats((prev) => prev ? { ...prev, sessions_completed: prev.sessions_completed + 1 } : prev)
+    }
+
+    wsClient.sendRaw({ type: 'session_finished', session_id: session.id })
+    setRunningSession(null)
+  }, [playClipOnce])
+
+  const handleStartSession = useCallback(async (event: WsEvent) => {
+    if (!event.session_id) return
+
+    // Abort any currently running session first
+    sessionAbortRef.current = true
+    engineRef.current.stop()
+    setIsPlaying(false)
+    setCurrentClipName(null)
+
+    try {
+      const session = await apiClient.get<Session>(`/api/v1/training/sessions/${event.session_id}`)
+      await runSession(session)
+    } catch {
+      setRunningSession(null)
+      wsClient.sendRaw({ type: 'session_finished', session_id: event.session_id })
+    }
+  }, [runSession])
+
+  const handleStopSession = useCallback(() => {
+    sessionAbortRef.current = true
+    engineRef.current.stop()
+    setIsPlaying(false)
+    setCurrentClipName(null)
+    setRunningSession((prev) => {
+      if (prev) {
+        wsClient.sendRaw({ type: 'session_finished', session_id: prev.session.id })
+      }
+      return null
+    })
+  }, [])
+
   // ── Start / Stop ────────────────────────────────────────────────────
 
   const handleStartStation = useCallback(async () => {
@@ -111,6 +240,7 @@ const StationPage = () => {
     setStartTime(Date.now())
     setUptime(0)
     void acquireWakeLock()
+    activateKeepAlive()
     connect()
 
     const detector = detectorRef.current
@@ -140,7 +270,7 @@ const StationPage = () => {
     } catch {
       // Camera denied — WebRTC won't work but station still functions
     }
-  }, [acquireWakeLock, connect, send, autoRecord, startCamera, startWebRTC])
+  }, [acquireWakeLock, activateKeepAlive, connect, send, autoRecord, startCamera, startWebRTC])
 
   const handleStopStation = useCallback(() => {
     setStationActive(false)
@@ -153,6 +283,10 @@ const StationPage = () => {
     setCurrentClipName(null)
     setShowHistory(false)
 
+    // Stop any running session without emitting finished (station is shutting down)
+    sessionAbortRef.current = true
+    setRunningSession(null)
+
     if (autoRecordTimerRef.current !== null) {
       clearTimeout(autoRecordTimerRef.current)
       autoRecordTimerRef.current = null
@@ -164,11 +298,12 @@ const StationPage = () => {
       rafRef.current = null
     }
     releaseWakeLock()
+    deactivateKeepAlive()
     wsDisconnect()
     stopWebRTC()
     stopCamera()
     setOwnerConnected(false)
-  }, [releaseWakeLock, wsDisconnect, stopWebRTC, stopCamera])
+  }, [releaseWakeLock, deactivateKeepAlive, wsDisconnect, stopWebRTC, stopCamera])
 
   const handleStopAndGoHome = useCallback(() => {
     handleStopStation()
@@ -181,11 +316,12 @@ const StationPage = () => {
     return () => {
       detectorRef.current.stop()
       engineRef.current.stop()
+      deactivateKeepAlive()
       if (rafRef.current !== null) {
         cancelAnimationFrame(rafRef.current)
       }
     }
-  }, [])
+  }, [deactivateKeepAlive])
 
   // ── Uptime counter ──────────────────────────────────────────────────
 
@@ -306,6 +442,8 @@ const StationPage = () => {
   useWsCommand('stop', handleStopCommand)
   useWsCommand('start_recording', handleStartRecording)
   useWsCommand('stop_recording', handleStopRecording)
+  useWsCommand('start_session', handleStartSession)
+  useWsCommand('stop_session', handleStopSession)
 
   useWsCommand('webrtc_offer', (e) => {
     if (e.sdp) void handleSignaling({ type: 'webrtc_offer', sdp: e.sdp })
@@ -488,6 +626,9 @@ const StationPage = () => {
           {wakeLockActive && (
             <span className="bg-slate-800 px-2 py-0.5 rounded-md">Pantalla activa</span>
           )}
+          {keepAliveActive && (
+            <span className="bg-slate-800 px-2 py-0.5 rounded-md">Audio activo</span>
+          )}
           {detectionActive && (
             <span className="bg-emerald-900/40 text-emerald-400 px-2 py-0.5 rounded-md">Escuchando</span>
           )}
@@ -516,6 +657,24 @@ const StationPage = () => {
             {Math.round(volumeLevel * 100)}%
           </span>
         </div>
+
+        {/* Running session banner */}
+        {runningSession && (
+          <div className="bg-brand-900/20 border border-brand-800/40 rounded-xl px-4 py-2.5 flex items-center justify-between gap-3 shrink-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className={`w-2 h-2 rounded-full shrink-0 ${runningSession.state === 'playing' ? 'bg-brand-400 animate-pulse' : 'bg-yellow-400'}`} />
+              <p className="text-brand-300 text-xs font-medium truncate">
+                {`Sesion: ${runningSession.session.name} — Paso ${runningSession.stepIndex + 1}/${runningSession.totalSteps}`}
+              </p>
+            </div>
+            <button
+              onClick={handleStopSession}
+              className="shrink-0 text-[10px] text-slate-400 hover:text-red-400 bg-slate-800 hover:bg-red-900/30 border border-slate-700 hover:border-red-800/50 px-2 py-1 rounded-md transition-colors"
+            >
+              Detener
+            </button>
+          </div>
+        )}
 
         {/* Activity + playing clip */}
         {(isPlaying && currentClipName) && (

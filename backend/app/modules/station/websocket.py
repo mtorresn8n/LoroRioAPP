@@ -21,7 +21,7 @@ _SIGNALING_TYPES = {"webrtc_offer", "webrtc_answer", "webrtc_ice_candidate"}
 _DUAL_ROUTE_TYPES = {"sound_detected", "recording_ready", "playback_finished"}
 
 # Station events forwarded to control only
-_CONTROL_ONLY_TYPES = {"station_status"}
+_CONTROL_ONLY_TYPES = {"station_status", "session_progress", "session_finished", "clip_started", "clip_finished"}
 
 # Event bus mapping for dual-routed types
 _EVENT_MAP = {
