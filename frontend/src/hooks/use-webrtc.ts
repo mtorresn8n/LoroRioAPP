@@ -23,25 +23,38 @@ interface UseWebRTCReturn {
 
 export const useWebRTC = ({ role, onRemoteStream, sendSignaling }: UseWebRTCOptions): UseWebRTCReturn => {
   const pcRef = useRef<RTCPeerConnection | null>(null)
-  // Store the local stream so the answerer can add tracks when the offer is processed.
+  // Store the local stream so the answerer can rebuild the PC on reconnect.
   const localStreamRef = useRef<MediaStream | null>(null)
   // Buffer an incoming offer that arrived before start() was called on the answerer.
   const pendingOfferSdpRef = useRef<string | null>(null)
   const [connectionState, setConnectionState] = useState<RTCPeerConnectionState | 'new'>('new')
   const [localAudioTrack, setLocalAudioTrack] = useState<MediaStreamTrack | null>(null)
 
-  const cleanup = useCallback(() => {
+  // Close the peer connection only — does NOT clear localStreamRef so the
+  // answerer can recreate the PC when a new offer arrives.
+  const closePc = useCallback(() => {
     if (pcRef.current) {
       pcRef.current.close()
       pcRef.current = null
     }
-    localStreamRef.current = null
     pendingOfferSdpRef.current = null
     setConnectionState('new')
     setLocalAudioTrack(null)
   }, [])
 
+  // Full cleanup: close PC AND release the local stream reference.
+  const cleanup = useCallback(() => {
+    closePc()
+    localStreamRef.current = null
+  }, [closePc])
+
   const createPeerConnection = useCallback((): RTCPeerConnection => {
+    // Close any existing PC before creating a new one
+    if (pcRef.current) {
+      pcRef.current.close()
+      pcRef.current = null
+    }
+
     const pc = new RTCPeerConnection(RTC_CONFIG)
 
     pc.onicecandidate = (event) => {
@@ -53,10 +66,6 @@ export const useWebRTC = ({ role, onRemoteStream, sendSignaling }: UseWebRTCOpti
       }
     }
 
-    // ontrack fires once per incoming track. event.streams[0] is the same live
-    // MediaStream object for all tracks in the same stream, so calling
-    // onRemoteStream on every track event ensures the video element gets
-    // srcObject assigned at the point the video track is added to the stream.
     pc.ontrack = (event) => {
       if (event.streams[0]) {
         onRemoteStream(event.streams[0])
@@ -66,13 +75,14 @@ export const useWebRTC = ({ role, onRemoteStream, sendSignaling }: UseWebRTCOpti
     pc.onconnectionstatechange = () => {
       setConnectionState(pc.connectionState)
       if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
-        cleanup()
+        // Only close the PC, keep localStreamRef so we can reconnect
+        closePc()
       }
     }
 
     pcRef.current = pc
     return pc
-  }, [sendSignaling, onRemoteStream, cleanup])
+  }, [sendSignaling, onRemoteStream, closePc])
 
   const addLocalTracks = useCallback((pc: RTCPeerConnection, localStream: MediaStream) => {
     for (const track of localStream.getTracks()) {
@@ -86,7 +96,7 @@ export const useWebRTC = ({ role, onRemoteStream, sendSignaling }: UseWebRTCOpti
   }, [role])
 
   const start = useCallback(async (localStream: MediaStream) => {
-    cleanup()
+    closePc()
     localStreamRef.current = localStream
     const pc = createPeerConnection()
 
@@ -103,8 +113,7 @@ export const useWebRTC = ({ role, onRemoteStream, sendSignaling }: UseWebRTCOpti
       return
     }
 
-    // Answerer: if an offer arrived before start() was called, process it now
-    // that we have the local stream and the peer connection ready.
+    // Answerer: if an offer arrived before start() was called, process it now.
     if (pendingOfferSdpRef.current) {
       const sdp = pendingOfferSdpRef.current
       pendingOfferSdpRef.current = null
@@ -113,7 +122,7 @@ export const useWebRTC = ({ role, onRemoteStream, sendSignaling }: UseWebRTCOpti
       await pc.setLocalDescription(answer)
       sendSignaling({ type: 'webrtc_answer', sdp: answer.sdp! })
     }
-  }, [role, createPeerConnection, addLocalTracks, sendSignaling, cleanup])
+  }, [role, createPeerConnection, addLocalTracks, sendSignaling, closePc])
 
   const replaceVideoTrack = useCallback((newStream: MediaStream) => {
     const pc = pcRef.current
@@ -128,16 +137,23 @@ export const useWebRTC = ({ role, onRemoteStream, sendSignaling }: UseWebRTCOpti
 
   const handleSignaling = useCallback(async (message: SignalingMessage) => {
     if (message.type === 'webrtc_reset') {
-      cleanup()
+      closePc()
       return
     }
 
     if (message.type === 'webrtc_offer' && role === 'answerer') {
-      const pc = pcRef.current
+      let pc = pcRef.current
+
+      if (!pc && localStreamRef.current) {
+        // PC was closed (e.g. caller disconnected and reconnected) but we
+        // still have the local camera stream. Rebuild the PC and process
+        // the new offer immediately.
+        pc = createPeerConnection()
+        addLocalTracks(pc, localStreamRef.current)
+      }
 
       if (!pc) {
-        // start() hasn't been called yet (e.g. camera permission still pending).
-        // Buffer the offer so start() can process it once the local stream is ready.
+        // start() hasn't been called yet (e.g. camera permission pending).
         pendingOfferSdpRef.current = message.sdp
         return
       }
@@ -159,7 +175,7 @@ export const useWebRTC = ({ role, onRemoteStream, sendSignaling }: UseWebRTCOpti
     if (message.type === 'webrtc_ice_candidate' && pc) {
       await pc.addIceCandidate(message.candidate)
     }
-  }, [role, sendSignaling, cleanup])
+  }, [role, sendSignaling, closePc, createPeerConnection, addLocalTracks])
 
   // Cleanup on unmount
   useEffect(() => {
