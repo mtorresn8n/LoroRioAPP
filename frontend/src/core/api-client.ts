@@ -4,8 +4,14 @@
 // with inline script execution order
 function getBaseUrl(): string {
   const win = window as unknown as Record<string, Record<string, string>>;
-  if (win['__LORO_CONFIG__']?.['API_URL']) return win['__LORO_CONFIG__']['API_URL'];
-  return (import.meta.env['VITE_API_URL'] as string | undefined) ?? 'http://localhost:8000';
+  let url = win['__LORO_CONFIG__']?.['API_URL']
+    ?? (import.meta.env['VITE_API_URL'] as string | undefined)
+    ?? 'http://localhost:8000';
+  // Prevent mixed-content: upgrade http→https when page is served over HTTPS
+  if (window.location.protocol === 'https:' && url.startsWith('http://')) {
+    url = url.replace('http://', 'https://');
+  }
+  return url;
 }
 
 // Exported for components that need direct URL access (e.g. audio src)
