@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Tooltip } from '@/components/tooltip'
+import { getApiBaseUrl } from '@/core/api-client'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -344,8 +345,26 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
           ))}
         </nav>
 
-        {/* Bottom spacer */}
-        <div className="px-3 py-3 shrink-0" />
+        {/* Logout */}
+        <div className="px-3 py-3 shrink-0 border-t border-slate-800">
+          <button
+            onClick={() => {
+              fetch(`${getApiBaseUrl()}/api/v1/auth/logout`, {
+                method: 'POST',
+                credentials: 'include',
+              }).finally(() => {
+                window.location.href = '/login'
+              })
+            }}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            <span>Cerrar sesión</span>
+          </button>
+        </div>
       </aside>
     </>
   )
