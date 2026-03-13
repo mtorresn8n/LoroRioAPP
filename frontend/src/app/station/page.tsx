@@ -60,7 +60,7 @@ const StationPage = () => {
 
   // ── Session runner state ─────────────────────────────────────────────
   const [runningSession, setRunningSession] = useState<RunningSession | null>(null)
-  const sessionAbortRef = useRef<boolean>(false)
+  const sessionAbortCtrlRef = useRef<AbortController | null>(null)
 
   // ── WebRTC + Camera state ────────────────────────────────────────────
   const [ownerConnected, setOwnerConnected] = useState(false)
@@ -143,59 +143,73 @@ const StationPage = () => {
       return
     }
 
-    sessionAbortRef.current = false
+    const controller = new AbortController()
+    sessionAbortCtrlRef.current = controller
 
-    for (let stepIdx = 0; stepIdx < steps.length; stepIdx++) {
-      if (sessionAbortRef.current) break
-      const step = steps[stepIdx]
+    const abortPromise = new Promise<never>((_, reject) => {
+      controller.signal.addEventListener('abort', () => reject(new DOMException('Session aborted', 'AbortError')))
+    })
 
-      for (let rep = 1; rep <= step.repetitions; rep++) {
-        if (sessionAbortRef.current) break
+    const sleep = (ms: number) => Promise.race([
+      new Promise<void>((resolve) => setTimeout(resolve, ms)),
+      abortPromise,
+    ])
 
-        const progressPayload = {
-          type: 'session_progress',
-          session_id: session.id,
-          stepIndex: stepIdx,
-          totalSteps: steps.length,
-          currentRep: rep,
-          totalReps: step.repetitions,
-          state: 'playing',
-          clipName: step.clip_name ?? null,
-        }
+    try {
+      for (let stepIdx = 0; stepIdx < steps.length; stepIdx++) {
+        if (controller.signal.aborted) break
+        const step = steps[stepIdx]
 
-        setRunningSession({
-          session,
-          stepIndex: stepIdx,
-          totalSteps: steps.length,
-          currentRep: rep,
-          totalReps: step.repetitions,
-          state: 'playing',
-        })
-        wsClient.sendRaw(progressPayload)
+        for (let rep = 1; rep <= step.repetitions; rep++) {
+          if (controller.signal.aborted) break
 
-        try {
-          setIsPlaying(true)
-          setCurrentClipName(step.clip_name ?? null)
-          await playClipOnce(step.clip_id)
-          setIsPlaying(false)
-          setCurrentClipName(null)
-        } catch {
-          setIsPlaying(false)
-          setCurrentClipName(null)
-        }
+          const progressPayload = {
+            type: 'session_progress',
+            session_id: session.id,
+            stepIndex: stepIdx,
+            totalSteps: steps.length,
+            currentRep: rep,
+            totalReps: step.repetitions,
+            state: 'playing',
+            clipName: step.clip_name ?? null,
+          }
 
-        if (sessionAbortRef.current) break
+          setRunningSession({
+            session,
+            stepIndex: stepIdx,
+            totalSteps: steps.length,
+            currentRep: rep,
+            totalReps: step.repetitions,
+            state: 'playing',
+          })
+          wsClient.sendRaw(progressPayload)
 
-        // Wait between reps (not after the last rep)
-        if (rep < step.repetitions && step.wait_seconds > 0) {
-          setRunningSession((prev) => prev ? { ...prev, state: 'waiting' } : null)
-          wsClient.sendRaw({ ...progressPayload, state: 'waiting' })
-          await new Promise<void>((resolve) => setTimeout(resolve, step.wait_seconds * 1_000))
+          try {
+            setIsPlaying(true)
+            setCurrentClipName(step.clip_name ?? null)
+            await playClipOnce(step.clip_id)
+            setIsPlaying(false)
+            setCurrentClipName(null)
+          } catch {
+            setIsPlaying(false)
+            setCurrentClipName(null)
+          }
+
+          if (controller.signal.aborted) break
+
+          // Wait between reps (not after the last rep)
+          if (rep < step.repetitions && step.wait_seconds > 0) {
+            setRunningSession((prev) => prev ? { ...prev, state: 'waiting' } : null)
+            wsClient.sendRaw({ ...progressPayload, state: 'waiting' })
+            await sleep(step.wait_seconds * 1_000)
+          }
         }
       }
+    } catch (err) {
+      if (!(err instanceof DOMException && err.name === 'AbortError')) throw err
     }
 
-    if (!sessionAbortRef.current) {
+    if (!controller.signal.aborted) {
       setStats((prev) => prev ? { ...prev, sessions_completed: prev.sessions_completed + 1 } : prev)
     }
 
@@ -207,7 +221,7 @@ const StationPage = () => {
     if (!event.session_id) return
 
     // Abort any currently running session first
-    sessionAbortRef.current = true
+    sessionAbortCtrlRef.current?.abort()
     engineRef.current.stop()
     setIsPlaying(false)
     setCurrentClipName(null)
@@ -222,7 +236,7 @@ const StationPage = () => {
   }, [runSession])
 
   const handleStopSession = useCallback(() => {
-    sessionAbortRef.current = true
+    sessionAbortCtrlRef.current?.abort()
     engineRef.current.stop()
     setIsPlaying(false)
     setCurrentClipName(null)
@@ -297,7 +311,7 @@ const StationPage = () => {
     setShowHistory(false)
 
     // Stop any running session without emitting finished (station is shutting down)
-    sessionAbortRef.current = true
+    sessionAbortCtrlRef.current?.abort()
     setRunningSession(null)
 
     if (autoRecordTimerRef.current !== null) {
@@ -439,6 +453,10 @@ const StationPage = () => {
 
   const handleStopRecording = useCallback(async () => {
     if (!isRecording) return
+    if (autoRecordTimerRef.current !== null) {
+      clearTimeout(autoRecordTimerRef.current)
+      autoRecordTimerRef.current = null
+    }
     try {
       const blob = await recorderRef.current.stop()
       isRecordingRef.current = false
@@ -672,7 +690,7 @@ const StationPage = () => {
               d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
           </svg>
           <div className="flex-1">
-            <VolumeMeter level={volumeLevel} threshold={0.15} orientation="horizontal" className="h-3" />
+            <VolumeMeter level={volumeLevel} threshold={sensitivity} orientation="horizontal" className="h-3" />
           </div>
           <span className="text-sm font-mono font-bold text-slate-100 tabular-nums w-10 text-right">
             {Math.round(volumeLevel * 100)}%

@@ -13,6 +13,9 @@ export function useKeepAlive() {
   const audioCtxRef = useRef<AudioContext | null>(null)
   const oscillatorRef = useRef<OscillatorNode | null>(null)
   const gainRef = useRef<GainNode | null>(null)
+  // Keep a stable reference to the statechange handler so it can be removed
+  // in deactivate() without creating a new function identity each render.
+  const stateChangeListenerRef = useRef<(() => void) | null>(null)
   const [isActive, setIsActive] = useState(false)
 
   const activate = useCallback(() => {
@@ -21,6 +24,21 @@ export function useKeepAlive() {
     try {
       const ctx = new AudioContext()
       audioCtxRef.current = ctx
+
+      // Resume immediately — browsers may create the context in 'suspended'
+      // state when there has been no prior user gesture on that page load.
+      void ctx.resume()
+
+      // Re-resume whenever the OS suspends the context (e.g. screen lock on
+      // iOS Safari). Without this the oscillator goes silent after the first
+      // suspension even though the browser process is still running.
+      const onStateChange = () => {
+        if (ctx.state === 'suspended') {
+          void ctx.resume()
+        }
+      }
+      ctx.addEventListener('statechange', onStateChange)
+      stateChangeListenerRef.current = onStateChange
 
       const oscillator = ctx.createOscillator()
       oscillator.type = 'sine'
@@ -55,6 +73,12 @@ export function useKeepAlive() {
     gainRef.current = null
 
     if (audioCtxRef.current) {
+      // Remove the statechange listener before closing to avoid any callbacks
+      // firing on a context that is already being torn down.
+      if (stateChangeListenerRef.current) {
+        audioCtxRef.current.removeEventListener('statechange', stateChangeListenerRef.current)
+        stateChangeListenerRef.current = null
+      }
       audioCtxRef.current.close().catch(() => {})
       audioCtxRef.current = null
     }

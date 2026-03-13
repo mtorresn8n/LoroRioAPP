@@ -50,10 +50,17 @@ def cut_audio(
 
 
 def normalize_volume(file_path: str, target_dBFS: float = -20.0) -> None:
-    """Normalize audio file to target dBFS in-place."""
+    """Normalize audio file to target dBFS in-place.
+
+    Silent audio produces a dBFS of -inf, which makes the gain delta +inf and
+    crashes apply_gain(). Guard against that by returning early — there is
+    nothing meaningful to normalize in a silent segment.
+    """
     from pydub import AudioSegment
 
     audio = AudioSegment.from_file(file_path)
+    if not math.isfinite(audio.dBFS):
+        return
     change_in_dBFS = target_dBFS - audio.dBFS
     normalized = audio.apply_gain(change_in_dBFS)
     suffix = Path(file_path).suffix.lstrip(".")

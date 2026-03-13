@@ -136,44 +136,52 @@ export const useWebRTC = ({ role, onRemoteStream, sendSignaling }: UseWebRTCOpti
   }, [])
 
   const handleSignaling = useCallback(async (message: SignalingMessage) => {
-    if (message.type === 'webrtc_reset') {
-      closePc()
-      return
-    }
-
-    if (message.type === 'webrtc_offer' && role === 'answerer') {
-      let pc = pcRef.current
-
-      if (!pc && localStreamRef.current) {
-        // PC was closed (e.g. caller disconnected and reconnected) but we
-        // still have the local camera stream. Rebuild the PC and process
-        // the new offer immediately.
-        pc = createPeerConnection()
-        addLocalTracks(pc, localStreamRef.current)
-      }
-
-      if (!pc) {
-        // start() hasn't been called yet (e.g. camera permission pending).
-        pendingOfferSdpRef.current = message.sdp
+    try {
+      if (message.type === 'webrtc_reset') {
+        closePc()
         return
       }
 
-      await pc.setRemoteDescription({ type: 'offer', sdp: message.sdp })
-      const answer = await pc.createAnswer()
-      await pc.setLocalDescription(answer)
-      sendSignaling({ type: 'webrtc_answer', sdp: answer.sdp! })
-      return
-    }
+      if (message.type === 'webrtc_offer' && role === 'answerer') {
+        let pc = pcRef.current
 
-    const pc = pcRef.current
+        if (!pc && localStreamRef.current) {
+          // PC was closed (e.g. caller disconnected and reconnected) but we
+          // still have the local camera stream. Rebuild the PC and process
+          // the new offer immediately.
+          pc = createPeerConnection()
+          addLocalTracks(pc, localStreamRef.current)
+        }
 
-    if (message.type === 'webrtc_answer' && role === 'caller' && pc) {
-      await pc.setRemoteDescription({ type: 'answer', sdp: message.sdp })
-      return
-    }
+        if (!pc) {
+          // start() hasn't been called yet (e.g. camera permission pending).
+          pendingOfferSdpRef.current = message.sdp
+          return
+        }
 
-    if (message.type === 'webrtc_ice_candidate' && pc) {
-      await pc.addIceCandidate(message.candidate)
+        await pc.setRemoteDescription({ type: 'offer', sdp: message.sdp })
+        const answer = await pc.createAnswer()
+        await pc.setLocalDescription(answer)
+        sendSignaling({ type: 'webrtc_answer', sdp: answer.sdp! })
+        return
+      }
+
+      const pc = pcRef.current
+
+      if (message.type === 'webrtc_answer' && role === 'caller' && pc) {
+        await pc.setRemoteDescription({ type: 'answer', sdp: message.sdp })
+        return
+      }
+
+      if (message.type === 'webrtc_ice_candidate' && pc) {
+        await pc.addIceCandidate(message.candidate)
+      }
+    } catch (err) {
+      // Swallow WebRTC errors that occur during reconnection races (e.g.
+      // InvalidStateError when a second offer arrives while the first is still
+      // being negotiated). The next offer or ICE restart will recover the
+      // connection.
+      console.warn('[useWebRTC] signaling error (ignored during reconnect):', err)
     }
   }, [role, sendSignaling, closePc, createPeerConnection, addLocalTracks])
 
