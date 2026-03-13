@@ -1,4 +1,5 @@
 import asyncio
+import math
 import os
 import shutil
 import subprocess
@@ -72,12 +73,17 @@ def add_fade(file_path: str, fade_in_ms: int, fade_out_ms: int) -> None:
     audio.export(file_path, format=suffix or "mp3")
 
 
-def get_peak_volume(file_path: str) -> float:
-    """Return peak dBFS of audio file."""
+def get_peak_volume(file_path: str) -> float | None:
+    """Return peak dBFS of audio file, or None for silent/empty audio.
+
+    pydub returns -inf dBFS for completely silent audio, which is not
+    JSON-serializable. Sanitize it to None instead.
+    """
     from pydub import AudioSegment
 
     audio = AudioSegment.from_file(file_path)
-    return audio.max_dBFS
+    value = audio.max_dBFS
+    return value if math.isfinite(value) else None
 
 
 async def get_audio_duration_async(file_path: str) -> float | None:

@@ -1,7 +1,8 @@
+import math
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class RecordingBase(BaseModel):
@@ -34,6 +35,22 @@ class RecordingResponse(BaseModel):
     duration: float | None = None
     peak_volume: float | None = None
     trigger_clip_id: uuid.UUID | None = None
+
+    @field_validator("peak_volume", "duration", mode="before")
+    @classmethod
+    def sanitize_non_finite(cls, v: object) -> float | None:
+        """Replace -inf, inf, and NaN float values with None.
+
+        pydub's max_dBFS returns -inf for silent audio, which is not
+        JSON-serializable and raises ValueError during response encoding.
+        """
+        if v is None:
+            return None
+        try:
+            f = float(v)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return None
+        return f if math.isfinite(f) else None
 
 
 class RecordingStats(BaseModel):

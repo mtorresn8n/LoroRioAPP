@@ -69,8 +69,15 @@ const RemoteControlPage = () => {
 
   const handleRemoteStream = useCallback((stream: MediaStream) => {
     setRemoteStream(stream)
+    // Assign srcObject immediately if the video element is already in the DOM,
+    // then explicitly call play() — browsers may not honour the autoPlay
+    // attribute when srcObject is set programmatically after mount.
     if (remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = stream
+      remoteVideoRef.current.play().catch(() => {
+        // Autoplay was blocked (e.g. user hasn't interacted yet).
+        // The video will start once the user interacts with the page.
+      })
     }
   }, [])
 
@@ -86,10 +93,12 @@ const RemoteControlPage = () => {
     sendSignaling,
   })
 
-  // Assign stream to video element when remoteVideoRef becomes available
+  // Fallback: assign stream to video element if ontrack fired before the ref
+  // was populated (unlikely but possible on very fast connections).
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream
+      remoteVideoRef.current.play().catch(() => {})
     }
   }, [remoteStream])
 
@@ -295,7 +304,8 @@ const RemoteControlPage = () => {
           <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
             {/* Video container */}
             <div className="relative bg-black aspect-video">
-              {/* Remote video */}
+              {/* Remote video — muted prevents audio feedback (caller also has a mic).
+                  autoPlay + playsInline are required for mobile browsers. */}
               <video
                 ref={remoteVideoRef}
                 autoPlay
