@@ -15,6 +15,7 @@ interface HostStatus {
   uptimeSeconds: number
   lastSoundAt: string | null
   battery: number | null
+  sensitivity: number
   stats: {
     clipsPlayed: number
     recordingsMade: number
@@ -41,6 +42,7 @@ const initialHostStatus: HostStatus = {
   uptimeSeconds: 0,
   lastSoundAt: null,
   battery: null,
+  sensitivity: 0.15,
   stats: { clipsPlayed: 0, recordingsMade: 0, sessionsCompleted: 0, soundsDetected: 0 },
 }
 
@@ -163,6 +165,7 @@ const RemoteControlPage = () => {
         isPaused: (p['is_paused'] as boolean) ?? prev.isPaused,
         uptimeSeconds: (p['uptime_seconds'] as number) ?? prev.uptimeSeconds,
         lastSoundAt: (p['last_sound_at'] as string | null) ?? prev.lastSoundAt,
+        sensitivity: (p['sensitivity'] as number) ?? prev.sensitivity,
         stats: {
           clipsPlayed: ((p['stats'] as Record<string, number> | undefined)?.['clips_played']) ?? prev.stats.clipsPlayed,
           recordingsMade: ((p['stats'] as Record<string, number> | undefined)?.['recordings_made']) ?? prev.stats.recordingsMade,
@@ -272,6 +275,15 @@ const RemoteControlPage = () => {
   // Quick actions
   const sendAction = useCallback((type: string, extra?: Record<string, unknown>) => {
     controlWsClient.sendRaw({ type, ...extra })
+  }, [])
+
+  // Save sensitivity to backend (debounced)
+  const sensitivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const saveSensitivity = useCallback((val: number) => {
+    if (sensitivityTimerRef.current) clearTimeout(sensitivityTimerRef.current)
+    sensitivityTimerRef.current = setTimeout(() => {
+      apiClient.put('/api/v1/settings/detection_threshold', { value: String(val) }).catch(() => {})
+    }, 500)
   }, [])
 
   // Start session
@@ -736,6 +748,33 @@ const RemoteControlPage = () => {
                     }`}
                     style={{ width: `${hostStatus.battery}%` }}
                   />
+                </div>
+              </div>
+            )}
+
+            {/* Sensitivity slider */}
+            {hostStatus.connected && (
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-slate-500 text-xs">Sensibilidad del microfono</span>
+                  <span className="text-slate-300 text-xs font-mono tabular-nums">{Math.round(hostStatus.sensitivity * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min={1}
+                  max={50}
+                  value={Math.round(hostStatus.sensitivity * 100)}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10) / 100
+                    setHostStatus(prev => ({ ...prev, sensitivity: val }))
+                    sendAction('set_sensitivity', { value: val })
+                    saveSensitivity(val)
+                  }}
+                  className="w-full h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer accent-brand-500 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-brand-500"
+                />
+                <div className="flex justify-between mt-1">
+                  <span className="text-[9px] text-slate-600">Mas sensible</span>
+                  <span className="text-[9px] text-slate-600">Menos sensible</span>
                 </div>
               </div>
             )}

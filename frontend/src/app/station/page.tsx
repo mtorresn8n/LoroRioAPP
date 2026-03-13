@@ -41,6 +41,7 @@ const StationPage = () => {
   const { activate: activateKeepAlive, deactivate: deactivateKeepAlive, isActive: keepAliveActive } = useKeepAlive()
 
   const [stationActive, setStationActive] = useState(false)
+  const [sensitivity, setSensitivity] = useState(0.15)
   const [volumeLevel, setVolumeLevel] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
@@ -243,9 +244,21 @@ const StationPage = () => {
     activateKeepAlive()
     connect()
 
+    // Load detection threshold from settings
+    let threshold = 0.15
+    try {
+      const settings = await apiClient.get<Array<{ key: string; value: string }>>('/api/v1/settings/', { category: 'station' })
+      const dtSetting = settings.find((s) => s.key === 'detection_threshold')
+      if (dtSetting?.value) {
+        const parsed = parseFloat(dtSetting.value)
+        if (!isNaN(parsed) && parsed > 0 && parsed <= 1) threshold = parsed
+      }
+    } catch { /* use default */ }
+    setSensitivity(threshold)
+
     const detector = detectorRef.current
     try {
-      await detector.start(0.15, 300, 2_000)
+      await detector.start(threshold, 300, 2_000)
       setDetectionActive(true)
 
       detector.onSoundDetected(() => {
@@ -347,11 +360,12 @@ const StationPage = () => {
         uptime_seconds: uptime,
         last_sound_at: lastSoundTime?.toISOString() ?? null,
         stats: stats ?? { clips_played: 0, recordings_made: 0, sessions_completed: 0, sounds_detected: 0 },
+        sensitivity,
       })
     }
     const id = setInterval(emitStatus, 10_000)
     return () => clearInterval(id)
-  }, [stationActive, detectionActive, isRecording, isPlaying, isPaused, uptime, lastSoundTime, stats])
+  }, [stationActive, detectionActive, isRecording, isPlaying, isPaused, uptime, lastSoundTime, stats, sensitivity])
 
   // ── Load stats + recordings periodically ────────────────────────────
 
@@ -460,6 +474,13 @@ const StationPage = () => {
       const newStream = await flipCamera()
       if (newStream) replaceVideoTrack(newStream)
     })()
+  })
+  useWsCommand('set_sensitivity', (e) => {
+    const val = (e as unknown as Record<string, unknown>)['value']
+    if (typeof val === 'number' && val > 0 && val <= 1) {
+      detectorRef.current.setThreshold(val)
+      setSensitivity(val)
+    }
   })
   useWsCommand('control_connected', () => setOwnerConnected(true))
   useWsCommand('control_disconnected', () => {

@@ -285,6 +285,7 @@ export type WsEventType =
   | 'start_session'
   | 'stop_session'
   | 'flip_camera'
+  | 'set_sensitivity'
   | 'session_progress'
   | 'session_finished'
   | 'clip_started'

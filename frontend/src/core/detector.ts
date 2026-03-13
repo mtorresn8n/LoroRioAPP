@@ -21,6 +21,14 @@ export class SoundDetector {
     return this.analyser
   }
 
+  get currentThreshold(): number {
+    return this.threshold
+  }
+
+  setThreshold(value: number): void {
+    this.threshold = Math.max(0, Math.min(1, value))
+  }
+
   getCurrentLevel(): number {
     if (!this.analyser) return 0
     const buffer = new Uint8Array(this.analyser.frequencyBinCount)
