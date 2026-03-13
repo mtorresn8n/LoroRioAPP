@@ -92,6 +92,10 @@ export const useWebRTC = ({ role, onRemoteStream, sendSignaling }: UseWebRTCOpti
     addLocalTracks(pc, localStream)
 
     if (role === 'caller') {
+      // Add a recvonly video transceiver so the SDP offer includes a video
+      // m-line. Without this the answerer's video tracks are never negotiated
+      // because the offer only contains audio.
+      pc.addTransceiver('video', { direction: 'recvonly' })
       const offer = await pc.createOffer()
       await pc.setLocalDescription(offer)
       sendSignaling({ type: 'webrtc_offer', sdp: offer.sdp! })
