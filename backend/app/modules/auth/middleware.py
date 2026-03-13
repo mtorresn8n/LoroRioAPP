@@ -24,6 +24,11 @@ PUBLIC_PREFIXES = (
     "/media/",
 )
 
+# Path suffixes that don't require authentication (media file serving)
+PUBLIC_SUFFIXES = (
+    "/file",
+)
+
 
 class AuthMiddleware:
     """Pure ASGI middleware for cookie-based authentication on HTTP requests."""
@@ -47,6 +52,11 @@ class AuthMiddleware:
 
         # Allow public prefixes (e.g., /media/ static files)
         if any(path.startswith(prefix) for prefix in PUBLIC_PREFIXES):
+            await self.app(scope, receive, send)
+            return
+
+        # Allow media file endpoints (audio/video served via <audio>/<video> src)
+        if method == "GET" and any(path.endswith(suffix) for suffix in PUBLIC_SUFFIXES):
             await self.app(scope, receive, send)
             return
 
