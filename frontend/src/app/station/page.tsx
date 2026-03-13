@@ -49,9 +49,9 @@ const StationPage = () => {
   const [ownerConnected, setOwnerConnected] = useState(false)
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null)
 
-  const { videoRef: cameraPreviewRef, start: startCamera, stop: stopCamera, isActive: cameraActive } = useCamera()
+  const { videoRef: cameraPreviewRef, start: startCamera, stop: stopCamera, flip: flipCamera, isActive: cameraActive } = useCamera()
 
-  const { start: startWebRTC, stop: stopWebRTC, handleSignaling, connectionState: rtcState } = useWebRTC({
+  const { start: startWebRTC, stop: stopWebRTC, replaceVideoTrack, handleSignaling, connectionState: rtcState } = useWebRTC({
     role: 'answerer',
     onRemoteStream: (stream) => {
       if (remoteAudioRef.current) {
@@ -316,6 +316,12 @@ const StationPage = () => {
   useWsCommand('webrtc_reset', () => {
     void handleSignaling({ type: 'webrtc_reset' })
     setOwnerConnected(false)
+  })
+  useWsCommand('flip_camera', () => {
+    void (async () => {
+      const newStream = await flipCamera()
+      if (newStream) replaceVideoTrack(newStream)
+    })()
   })
   useWsCommand('control_connected', () => setOwnerConnected(true))
   useWsCommand('control_disconnected', () => {

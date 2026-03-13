@@ -15,6 +15,7 @@ interface UseWebRTCOptions {
 interface UseWebRTCReturn {
   start: (localStream: MediaStream) => Promise<void>
   stop: () => void
+  replaceVideoTrack: (newStream: MediaStream) => void
   handleSignaling: (message: SignalingMessage) => Promise<void>
   connectionState: RTCPeerConnectionState | 'new'
   localAudioTrack: MediaStreamTrack | null
@@ -114,6 +115,17 @@ export const useWebRTC = ({ role, onRemoteStream, sendSignaling }: UseWebRTCOpti
     }
   }, [role, createPeerConnection, addLocalTracks, sendSignaling, cleanup])
 
+  const replaceVideoTrack = useCallback((newStream: MediaStream) => {
+    const pc = pcRef.current
+    if (!pc) return
+    const newVideoTrack = newStream.getVideoTracks()[0]
+    if (!newVideoTrack) return
+    const sender = pc.getSenders().find(s => s.track?.kind === 'video')
+    if (sender) {
+      void sender.replaceTrack(newVideoTrack)
+    }
+  }, [])
+
   const handleSignaling = useCallback(async (message: SignalingMessage) => {
     if (message.type === 'webrtc_reset') {
       cleanup()
@@ -157,6 +169,7 @@ export const useWebRTC = ({ role, onRemoteStream, sendSignaling }: UseWebRTCOpti
   return {
     start,
     stop: cleanup,
+    replaceVideoTrack,
     handleSignaling,
     connectionState,
     localAudioTrack,
