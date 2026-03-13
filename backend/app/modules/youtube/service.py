@@ -12,7 +12,8 @@ from app.shared import audio_utils, storage
 
 # Browser to extract cookies from. Override with YOUTUBE_COOKIES_BROWSER env var.
 # Supported: chrome, edge, firefox, opera, brave, chromium, safari
-_COOKIES_BROWSER = os.environ.get("YOUTUBE_COOKIES_BROWSER", "firefox")
+# Default empty — server environments typically have no browser installed.
+_COOKIES_BROWSER = os.environ.get("YOUTUBE_COOKIES_BROWSER", "")
 
 # Optional Netscape-format cookies file (takes priority over browser cookies).
 _COOKIES_FILE = os.environ.get("YOUTUBE_COOKIES_FILE", "")

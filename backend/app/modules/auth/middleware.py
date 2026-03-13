@@ -45,6 +45,11 @@ class AuthMiddleware:
         path: str = scope.get("path", "")
         method: str = scope.get("method", "GET")
 
+        # Let CORS preflight requests through (handled by CORSMiddleware)
+        if method == "OPTIONS":
+            await self.app(scope, receive, send)
+            return
+
         # Allow public paths (method + path match)
         if (method, path) in PUBLIC_PATHS:
             await self.app(scope, receive, send)
